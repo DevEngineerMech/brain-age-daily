@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../services/admob_service.dart';
+
 class AppBannerAd extends StatefulWidget {
   const AppBannerAd({super.key});
 
@@ -10,164 +12,87 @@ class AppBannerAd extends StatefulWidget {
 }
 
 class _AppBannerAdState extends State<AppBannerAd> {
-  BannerAd? _bannerAd;
-  bool _loaded = false;
-  bool _requestSent = false;
-  bool _failed = false;
+  bool _requested = false;
 
   @override
   void initState() {
     super.initState();
-    _loadAd();
-  }
 
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    super.dispose();
-  }
+    Future<void>.delayed(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
 
-  String get _adUnitId {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-        return 'ca-app-pub-3940256099942544/2934735716';
-      case TargetPlatform.android:
-        return 'ca-app-pub-3940256099942544/6300978111';
-      default:
-        return 'ca-app-pub-3940256099942544/6300978111';
-    }
-  }
+      if (!kIsWeb && AdMobService.isIOS) {
+        setState(() {
+          _requested = true;
+        });
 
-  void _loadAd() {
-    if (kIsWeb) {
-      return;
-    }
+        await AdMobService.loadBannerAd();
 
-    _requestSent = true;
-
-    final BannerAd banner = BannerAd(
-      size: AdSize.banner,
-      adUnitId: _adUnitId,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (Ad ad) {
-          if (!mounted) return;
-          setState(() {
-            _bannerAd = ad as BannerAd;
-            _loaded = true;
-            _failed = false;
-          });
-        },
-        onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          ad.dispose();
-          if (!mounted) return;
-          setState(() {
-            _bannerAd = null;
-            _loaded = false;
-            _failed = true;
-          });
-        },
-      ),
-    );
-
-    banner.load();
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      return _statusBox(
-        background: const Color(0xFF5F6368),
-        border: const Color(0xFF80868B),
-        text: 'Web mode · ads disabled',
-        icon: Icons.language,
+      return _debugBox(
+        color: const Color(0xFF70757A),
+        text: '🌐 Web mode • ads disabled',
       );
     }
 
-    if (_loaded && _bannerAd != null) {
+    if (!AdMobService.isIOS) {
+      return _debugBox(
+        color: const Color(0xFF70757A),
+        text: 'Ads disabled on this platform',
+      );
+    }
+
+    if (AdMobService.isBannerLoaded && AdMobService.bannerAd != null) {
       return Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.15),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 10,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AdWidget(ad: _bannerAd!),
+        width: AdMobService.bannerAd!.size.width.toDouble(),
+        height: AdMobService.bannerAd!.size.height.toDouble(),
+        alignment: Alignment.center,
+        child: AdWidget(ad: AdMobService.bannerAd!),
       );
     }
 
-    if (_failed) {
-      return _statusBox(
-        background: const Color(0xFF7A1F1F),
-        border: const Color(0xFFFF5A5A),
-        text: 'Ad request failed',
-        icon: Icons.error_outline,
+    if (_requested || AdMobService.isBannerLoading) {
+      return _debugBox(
+        color: const Color(0xFF22C55E),
+        text: '🟢 Banner ad requested',
       );
     }
 
-    if (_requestSent) {
-      return _statusBox(
-        background: const Color(0xFF184D2A),
-        border: const Color(0xFF39D98A),
-        text: 'Ad request sent · waiting for fill',
-        icon: Icons.check_circle_outline,
-      );
-    }
-
-    return _statusBox(
-      background: const Color(0xFF2D3748),
-      border: const Color(0xFF4A5568),
-      text: 'Preparing ad slot',
-      icon: Icons.hourglass_bottom,
+    return _debugBox(
+      color: const Color(0xFFEF4444),
+      text: '🔴 Banner ad not requested',
     );
   }
 
-  Widget _statusBox({
-    required Color background,
-    required Color border,
+  Widget _debugBox({
+    required Color color,
     required String text,
-    required IconData icon,
   }) {
     return Container(
-      height: 60,
+      width: double.infinity,
+      height: 50,
+      alignment: Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border, width: 1.4),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        color: color,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13.5,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 13,
+        ),
       ),
     );
   }

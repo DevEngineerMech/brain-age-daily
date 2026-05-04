@@ -1,16 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'features/home/home_page.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (!kIsWeb) {
-    await MobileAds.instance.initialize();
-  }
-
   runApp(const BrainAgeApp());
 }
 
