@@ -27,9 +27,16 @@ workflows:
           pod install
           cd ..
 
+      - name: Set up iOS code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files app.rork.brain-age-daily --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
       - name: Build signed IPA
         script: |
-          flutter build ipa --release
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
