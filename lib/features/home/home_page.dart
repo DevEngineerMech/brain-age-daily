@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/widgets/app_banner_ad.dart';
 import '../daily/daily_page.dart';
 import '../free_play/free_play_page.dart';
 import '../stats/stats_page.dart';
@@ -28,9 +27,7 @@ class _HomePageState extends State<HomePage> {
     if (heartsLeft <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'No daily attempts left. Watch ad system can be added next.',
-          ),
+          content: Text('No daily attempts left.'),
         ),
       );
       return;
@@ -73,9 +70,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(22),
@@ -92,12 +87,10 @@ class _HomePageState extends State<HomePage> {
                           color: Colors.black54,
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
-                      Stack(
+                      const Stack(
                         alignment: Alignment.center,
-                        children: const [
+                        children: [
                           Icon(
                             Icons.psychology,
                             size: 88,
@@ -112,37 +105,28 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 12),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
                           3,
                           (i) => Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Icon(
                               Icons.favorite,
                               color: i < heartsLeft
                                   ? Colors.red
-                                  : Colors.grey.shade400,
+                                  : Colors.grey,
                             ),
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 8),
-
                       Text(
                         '$heartsLeft / 3 Daily Attempts Left',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-
                       const SizedBox(height: 16),
-
                       SizedBox(
                         width: double.infinity,
                         height: 58,
@@ -152,8 +136,7 @@ class _HomePageState extends State<HomePage> {
                             backgroundColor: const Color(0xFF5F5AE6),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(18),
                             ),
                           ),
                           child: const Text(
@@ -168,9 +151,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -179,8 +160,7 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Your Age',
@@ -198,8 +178,7 @@ class _HomePageState extends State<HomePage> {
                           filled: true,
                           fillColor: Colors.grey.shade100,
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         onChanged: (value) {
@@ -214,16 +193,12 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 10),
                       Text(
                         'Used for score expectations & graphs',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                        ),
+                        style: TextStyle(color: Colors.grey.shade700),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 Row(
                   children: [
                     Expanded(
@@ -235,8 +210,7 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const FreePlayPage(),
+                              builder: (_) => const FreePlayPage(),
                             ),
                           );
                         },
@@ -252,8 +226,7 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const StatsPage(),
+                              builder: (_) => const StatsPage(),
                             ),
                           );
                         },
@@ -261,10 +234,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 18),
-
-                const AppBannerAd(),
               ],
             ),
           ),
@@ -303,9 +272,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
+              style: TextStyle(color: Colors.grey.shade700),
             ),
           ],
         ),
