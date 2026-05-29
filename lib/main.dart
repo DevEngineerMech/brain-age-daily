@@ -1,60 +1,21 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
-import 'features/home/home_page.dart';
-
 void main() {
-  runZonedGuarded(() {
-    WidgetsFlutterBinding.ensureInitialized();
-
-    ErrorWidget.builder = (FlutterErrorDetails details) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                details.exceptionAsString(),
-                style: const TextStyle(color: Colors.red, fontSize: 16),
-              ),
-            ),
-          ),
-        ),
-      );
-    };
-
-    runApp(const BrainAgeApp());
-  }, (error, stack) {
-    runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                '$error\n\n$stack',
-                style: const TextStyle(color: Colors.red, fontSize: 14),
-              ),
-            ),
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      backgroundColor: Color(0xFF5F5AE6),
+      body: Center(
+        child: Text(
+          'TESTFLIGHT IS RUNNING',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
-    );
-  });
-}
-
-class BrainAgeApp extends StatelessWidget {
-  const BrainAgeApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: HomePage(),
-    );
-  }
+    ),
+  ));
 }
