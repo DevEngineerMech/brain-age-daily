@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/game_ids.dart';
-import '../../core/widgets/app_banner_ad.dart';
 
 import '../games/antonyms/antonyms_page.dart';
 import '../games/biology_quiz/biology_quiz_page.dart';
@@ -204,13 +203,6 @@ class FreePlayPage extends StatelessWidget {
                       ),
                     );
                   },
-                ),
-              ),
-              const SafeArea(
-                top: false,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: AppBannerAd(),
                 ),
               ),
             ],
