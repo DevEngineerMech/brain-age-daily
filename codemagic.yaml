@@ -17,14 +17,13 @@ workflows:
     scripts:
       - name: Verify source files
         script: |
-          echo "===== CURRENT BRANCH ====="
-          git branch --show-current
-          echo "===== LATEST COMMIT ====="
+          echo "===== CURRENT COMMIT ====="
           git log -1 --oneline
           echo "===== PUBSPEC VERSION ====="
           grep "version:" pubspec.yaml
           echo "===== MAIN.DART START ====="
           sed -n '1,120p' lib/main.dart
+          echo "===== MAIN.DART END ====="
 
       - name: Flutter clean + get
         script: |
@@ -34,7 +33,6 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios
-          pod repo update
           pod install
           cd ..
 
@@ -52,7 +50,6 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
 
     publishing:
       app_store_connect:
