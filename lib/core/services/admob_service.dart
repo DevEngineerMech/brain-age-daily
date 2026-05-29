@@ -1,39 +1,13 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 class AdMobService {
-  static bool _isInitialized = false;
-  static bool _isInterstitialReady = false;
+  static bool get isIOS => !kIsWeb;
+  static bool get isInterstitialReady => false;
 
-  static bool get isIOS {
-    if (kIsWeb) return false;
-    return Platform.isIOS;
-  }
+  static Future<void> initialize() async {}
+  static Future<void> loadBannerAd() async {}
+  static Future<void> loadInterstitialAd() async {}
+  static Future<void> showInterstitialAd() async {}
 
-  static bool get isInterstitialReady => _isInterstitialReady;
-
-  static Future<void> initialize() async {
-    _isInitialized = true;
-    _isInterstitialReady = false;
-  }
-
-  static Future<void> loadBannerAd() async {
-    _isInitialized = true;
-  }
-
-  static Future<void> loadInterstitialAd() async {
-    _isInitialized = true;
-    _isInterstitialReady = false;
-  }
-
-  static Future<void> showInterstitialAd() async {
-    _isInitialized = true;
-    _isInterstitialReady = false;
-  }
-
-  static void disposeBannerAd() {
-    _isInterstitialReady = false;
-  }
-
-  static bool get isInitialized => _isInitialized;
+  static void disposeBannerAd() {}
 }

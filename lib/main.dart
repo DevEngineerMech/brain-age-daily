@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'features/home/home_page.dart';
@@ -8,25 +7,17 @@ void main() {
   runZonedGuarded(() {
     WidgetsFlutterBinding.ensureInitialized();
 
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-    };
-
     ErrorWidget.builder = (FlutterErrorDetails details) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          backgroundColor: const Color(0xFF0B1020),
+          backgroundColor: Colors.black,
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               child: Text(
                 details.exceptionAsString(),
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 16),
               ),
             ),
           ),
@@ -35,22 +26,18 @@ void main() {
     };
 
     runApp(const BrainAgeApp());
-  }, (Object error, StackTrace stackTrace) {
+  }, (error, stack) {
     runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          backgroundColor: const Color(0xFF0B1020),
+          backgroundColor: Colors.black,
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               child: Text(
-                '$error\n\n$stackTrace',
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                '$error\n\n$stack',
+                style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
             ),
           ),
@@ -65,24 +52,9 @@ class BrainAgeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Brain Age Daily',
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0B1020),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF11182B),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const HomePage(),
+      home: HomePage(),
     );
   }
 }
