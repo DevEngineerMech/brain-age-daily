@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 
+import 'features/home/home_page.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Scaffold(
-      backgroundColor: Color(0xFF5F5AE6),
-      body: Center(
-        child: Text(
-          'TESTFLIGHT IS RUNNING',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+  runApp(const BrainAgeDailyApp());
+}
+
+class BrainAgeDailyApp extends StatelessWidget {
+  const BrainAgeDailyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Brain Age Daily',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Arial',
       ),
-    ),
-  ));
+      home: const HomePage(),
+    );
+  }
 }
