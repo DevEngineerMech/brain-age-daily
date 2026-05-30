@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/game_ids.dart';
 import '../../core/widgets/app_interstitial_ad.dart';
+import '../../core/widgets/timed_free_play_ad_wrapper.dart';
 
 import '../games/antonyms/antonyms_page.dart';
 import '../games/biology_quiz/biology_quiz_page.dart';
@@ -102,7 +103,9 @@ class _FreePlayPageState extends State<FreePlayPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _pageForGame(gameId),
+        builder: (_) => TimedFreePlayAdWrapper(
+  child: _pageForGame(gameId),
+),
       ),
     );
   }

@@ -7,6 +7,8 @@ class AppInterstitialAd {
   static InterstitialAd? _ad;
   static bool _isLoading = false;
 
+  static final ValueNotifier<bool> isShowingAd = ValueNotifier<bool>(false);
+
   static const String _testAdUnitId =
       'ca-app-pub-3940256099942544/4411468910';
 
@@ -42,29 +44,27 @@ class AppInterstitialAd {
     final InterstitialAd adToShow = _ad!;
     _ad = null;
 
-    final Future<void> closed = _waitForClose(adToShow);
+    final Completer<void> completer = Completer<void>();
 
-    adToShow.show();
-
-    await closed;
-
-    load();
-  }
-
-  static Future<void> _waitForClose(InterstitialAd ad) {
-    final completer = Completer<void>();
-
-    ad.fullScreenContentCallback = FullScreenContentCallback(
+    adToShow.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) {
+        isShowingAd.value = true;
+      },
       onAdDismissedFullScreenContent: (InterstitialAd ad) {
         ad.dispose();
-        completer.complete();
+        isShowingAd.value = false;
+        if (!completer.isCompleted) completer.complete();
+        load();
       },
       onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
         ad.dispose();
-        completer.complete();
+        isShowingAd.value = false;
+        if (!completer.isCompleted) completer.complete();
+        load();
       },
     );
 
-    return completer.future;
+    adToShow.show();
+    await completer.future;
   }
 }
