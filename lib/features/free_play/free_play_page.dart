@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/game_ids.dart';
+import '../../core/widgets/app_interstitial_ad.dart';
 
 import '../games/antonyms/antonyms_page.dart';
 import '../games/biology_quiz/biology_quiz_page.dart';
@@ -18,59 +21,65 @@ import '../games/word_scramble/word_scramble_page.dart';
 import '../games/word_snap/word_snap_page.dart';
 import '../games/sudoku/sudoku_page.dart';
 
-class FreePlayPage extends StatelessWidget {
+class FreePlayPage extends StatefulWidget {
   const FreePlayPage({super.key});
+
+  @override
+  State<FreePlayPage> createState() => _FreePlayPageState();
+}
+
+class _FreePlayPageState extends State<FreePlayPage> {
+  final Random _random = Random();
+
+  int _openedGamesSinceAd = 0;
+  late int _nextAdAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _nextAdAt = _randomTarget();
+    AppInterstitialAd.load();
+  }
+
+  int _randomTarget() {
+    return 5 + _random.nextInt(6); // 5 to 10
+  }
 
   Widget _pageForGame(String gameId) {
     switch (gameId) {
       case GameIds.quickMath:
         return const QuickMathPage();
-
       case GameIds.timeDifference:
         return const TimeDifferencePage();
-
       case GameIds.antonyms:
         return const AntonymsPage();
-
       case GameIds.scienceQuiz:
         return const ScienceQuizPage();
-
       case GameIds.biologyQuiz:
         return const BiologyQuizPage();
-
       case GameIds.wordSnap:
         return const WordSnapPage();
-
       case GameIds.wordScramble:
         return const WordScramblePage();
-
       case GameIds.focusCount:
         return FocusCountPage(
           gameId: gameId,
           title: GameIds.label(gameId),
         );
-
       case GameIds.stroopShift:
         return const StroopShiftPage();
-
       case GameIds.reactionSwitch:
         return const ReactionSwitchPage();
-
       case GameIds.sudoku:
         return const SudokuPage();
-
       case GameIds.symbolMatch:
         return const SymbolMatchPage();
-
       case GameIds.patternLogic:
         return const PatternLogicPage();
-
       case GameIds.memoryGrid:
         return const MemoryGridPage();
-
       case GameIds.orderRecall:
         return const OrderRecallPage();
-
       default:
         return FocusCountPage(
           gameId: gameId,
@@ -79,7 +88,17 @@ class FreePlayPage extends StatelessWidget {
     }
   }
 
-  void _openGame(BuildContext context, String gameId) {
+  Future<void> _openGame(BuildContext context, String gameId) async {
+    _openedGamesSinceAd++;
+
+    if (_openedGamesSinceAd >= _nextAdAt) {
+      _openedGamesSinceAd = 0;
+      _nextAdAt = _randomTarget();
+      await AppInterstitialAd.show(context);
+    }
+
+    if (!context.mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
