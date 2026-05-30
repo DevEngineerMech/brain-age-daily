@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -20,6 +18,7 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
 
   int score = 0;
   bool showPattern = true;
+
   final Set<int> selected = <int>{};
   Timer? hideTimer;
 
@@ -38,8 +37,7 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
   void _next() {
     hideTimer?.cancel();
 
-    _question = MemoryGridQuestions
-        .all[_random.nextInt(MemoryGridQuestions.all.length)];
+    _question = MemoryGridQuestions.all[_random.nextInt(MemoryGridQuestions.all.length)];
 
     selected.clear();
     showPattern = true;
@@ -48,7 +46,6 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
 
     hideTimer = Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-
       setState(() {
         showPattern = false;
       });
@@ -64,24 +61,21 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
     final bool correctTile = _question.pattern.contains(index);
 
     if (!correctTile) {
+      setState(() {});
       Future.delayed(const Duration(milliseconds: 250), () {
         if (!mounted) return;
         _next();
       });
-
-      setState(() {});
       return;
     }
 
     if (selected.length == _question.pattern.length) {
       score++;
-
+      setState(() {});
       Future.delayed(const Duration(milliseconds: 250), () {
         if (!mounted) return;
         _next();
       });
-
-      setState(() {});
       return;
     }
 
@@ -93,17 +87,9 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
     final bool picked = selected.contains(index);
     final bool correctTile = _question.pattern.contains(index);
 
-    if (lit) {
-      return Colors.blue;
-    }
-
-    if (picked && correctTile) {
-      return Colors.green;
-    }
-
-    if (picked && !correctTile) {
-      return Colors.red;
-    }
+    if (lit) return Colors.blue;
+    if (picked && correctTile) return Colors.green;
+    if (picked && !correctTile) return Colors.red;
 
     return Colors.grey.shade300;
   }
@@ -114,50 +100,59 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
       appBar: AppBar(
         title: const Text('Memory Grid'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(
-              showPattern
-                  ? 'Remember the highlighted squares'
-                  : 'Tap the squares that were highlighted',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                itemCount: 16,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                ),
-                itemBuilder: (_, index) {
-                  return GestureDetector(
-                    onTap: () => _tap(index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      decoration: BoxDecoration(
-                        color: _tileColor(index),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.black.withOpacity(0.08),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              Text('Score: $score', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(
+                showPattern
+                    ? 'Remember the highlighted squares'
+                    : 'Tap the squares that were highlighted',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 17),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double size = min(constraints.maxWidth, constraints.maxHeight);
+
+                    return Center(
+                      child: SizedBox(
+                        width: size,
+                        height: size,
+                        child: GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 16,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                          ),
+                          itemBuilder: (_, index) {
+                            return GestureDetector(
+                              onTap: () => _tap(index),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                decoration: BoxDecoration(
+                                  color: _tileColor(index),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.black.withOpacity(0.08)),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            Text(
-              'Score: $score',
-              style: const TextStyle(fontSize: 22),
-            ),
-            const SizedBox(height: 16),
-          ],
+            ],
+          ),
         ),
       ),
     );

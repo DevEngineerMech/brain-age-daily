@@ -14,7 +14,6 @@ class _AntonymsPageState extends State<AntonymsPage> {
   final Random _random = Random();
 
   late AntonymQuestion _question;
-
   int score = 0;
 
   @override
@@ -24,70 +23,62 @@ class _AntonymsPageState extends State<AntonymsPage> {
   }
 
   void _next() {
-    _question = AntonymQuestions
-        .all[_random.nextInt(AntonymQuestions.all.length)];
-
+    _question = AntonymQuestions.all[_random.nextInt(AntonymQuestions.all.length)];
     setState(() {});
   }
 
   void _tap(String value) {
-    if (value == _question.answer) {
-      score++;
-    }
-
+    if (value == _question.answer) score++;
     _next();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Antonyms'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Spacer(),
-
-            const Text(
-              'Choose the opposite word',
-              style: TextStyle(fontSize: 18),
-            ),
-
-            const SizedBox(height: 20),
-
-            Text(
-              _question.word,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            ..._question.options.map(
-              (option) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _tap(option),
-                    child: Text(option),
+      appBar: AppBar(title: const Text('Antonyms')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              Text('Score: $score', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text('Choose the opposite word', style: TextStyle(fontSize: 17)),
+              const SizedBox(height: 10),
+              Expanded(
+                flex: 3,
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _question.word,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
-            ),
-
-            const Spacer(),
-
-            Text(
-              'Score: $score',
-              style: const TextStyle(fontSize: 22),
-            ),
-          ],
+              Expanded(
+                flex: 4,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: _question.options.map((option) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () => _tap(option),
+                          child: FittedBox(child: Text(option)),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
