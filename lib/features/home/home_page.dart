@@ -24,12 +24,16 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   void _startDaily() {
+    _dismissKeyboard();
+
     if (heartsLeft <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No daily attempts left.'),
-        ),
+        const SnackBar(content: Text('No daily attempts left.')),
       );
       return;
     }
@@ -40,9 +44,7 @@ class _HomePageState extends State<HomePage> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const DailyPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const DailyPage()),
     );
   }
 
@@ -50,202 +52,212 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFF5F5AE6);
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: pageBg,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Brain Age Daily',
-                    style: TextStyle(
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: pageBg,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Brain Age Daily',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'YOUR BRAIN AGE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(
+                              Icons.psychology,
+                              size: 88,
+                              color: Color(0x11000000),
+                            ),
+                            Text(
+                              '40',
+                              style: TextStyle(
+                                fontSize: 62,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            3,
+                            (i) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(
+                                Icons.favorite,
+                                color: i < heartsLeft ? Colors.red : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$heartsLeft / 3 Daily Attempts Left',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 58,
+                          child: ElevatedButton(
+                            onPressed: _startDaily,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: pageBg,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text(
+                              'Start Daily Brain Check',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Your Age',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          onEditingComplete: _dismissKeyboard,
+                          decoration: InputDecoration(
+                            hintText: 'Enter age',
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.check_circle),
+                              onPressed: _dismissKeyboard,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            final parsed = int.tryParse(value);
+                            if (parsed != null) {
+                              setState(() {
+                                age = parsed;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Used for score expectations & graphs',
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
+
+                  const SizedBox(height: 16),
+
+                  Row(
                     children: [
-                      const Text(
-                        'YOUR BRAIN AGE',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black54,
+                      Expanded(
+                        child: _navButton(
+                          title: 'Free Play',
+                          subtitle: 'Unlimited training',
+                          icon: Icons.sports_esports,
+                          onTap: () {
+                            _dismissKeyboard();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FreePlayPage(),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            size: 88,
-                            color: Color(0x11000000),
-                          ),
-                          Text(
-                            '40',
-                            style: TextStyle(
-                              fontSize: 62,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          3,
-                          (i) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(
-                              Icons.favorite,
-                              color: i < heartsLeft ? Colors.red : Colors.grey,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$heartsLeft / 3 Daily Attempts Left',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 58,
-                        child: ElevatedButton(
-                          onPressed: _startDaily,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: pageBg,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          child: const Text(
-                            'Start Daily Brain Check',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _navButton(
+                          title: 'Progress',
+                          subtitle: 'Graphs & stats',
+                          icon: Icons.show_chart,
+                          onTap: () {
+                            _dismissKeyboard();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const StatsPage(),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 16),
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Your Age',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _ageController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'Enter age',
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          final parsed = int.tryParse(value);
-                          if (parsed != null) {
-                            setState(() {
-                              age = parsed;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Used for score expectations & graphs',
-                        style: TextStyle(color: Colors.grey.shade700),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _navButton(
-                        title: 'Free Play',
-                        subtitle: 'Unlimited training',
-                        icon: Icons.sports_esports,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const FreePlayPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _navButton(
-                        title: 'Progress',
-                        subtitle: 'Graphs & stats',
-                        icon: Icons.show_chart,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const StatsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                const AppBannerAd(),
-
-                const SizedBox(height: 8),
-              ],
+                  const SizedBox(height: 16),
+                  const AppBannerAd(),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ),
