@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/app_banner_ad.dart';
 import '../daily/daily_page.dart';
 import '../free_play/free_play_page.dart';
 import '../stats/stats_page.dart';
@@ -70,7 +71,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(22),
@@ -114,9 +117,7 @@ class _HomePageState extends State<HomePage> {
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Icon(
                               Icons.favorite,
-                              color: i < heartsLeft
-                                  ? Colors.red
-                                  : Colors.grey,
+                              color: i < heartsLeft ? Colors.red : Colors.grey,
                             ),
                           ),
                         ),
@@ -133,7 +134,7 @@ class _HomePageState extends State<HomePage> {
                         child: ElevatedButton(
                           onPressed: _startDaily,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5F5AE6),
+                            backgroundColor: pageBg,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
@@ -151,7 +152,9 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -198,7 +201,9 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 Row(
                   children: [
                     Expanded(
@@ -234,6 +239,12 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 16),
+
+                const AppBannerAd(),
+
+                const SizedBox(height: 8),
               ],
             ),
           ),
