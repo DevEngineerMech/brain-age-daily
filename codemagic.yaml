@@ -29,6 +29,10 @@ workflows:
         script: |
           flutter clean
           flutter pub get
+                - name: Generate app icons
+                
+        script: |
+          flutter pub run flutter_launcher_icons
 
       - name: Install CocoaPods
         script: |

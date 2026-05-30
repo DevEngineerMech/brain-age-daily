@@ -10,7 +10,7 @@ class AppInterstitialAd {
   static final ValueNotifier<bool> isShowingAd = ValueNotifier<bool>(false);
 
   static const String _testAdUnitId =
-      'ca-app-pub-3940256099942544/4411468910';
+      'ca-app-pub-6683665885451621/8459172347';
 
   static void load() {
     if (_isLoading || _ad != null) return;

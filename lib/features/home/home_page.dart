@@ -179,36 +179,41 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 10),
                         TextField(
-                          controller: _ageController,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.done,
-                          onEditingComplete: _dismissKeyboard,
-                          decoration: InputDecoration(
-                            hintText: 'Enter age',
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.check_circle),
-                              onPressed: _dismissKeyboard,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            final parsed = int.tryParse(value);
-                            if (parsed != null) {
-                              setState(() {
-                                age = parsed;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Used for score expectations & graphs',
-                          style: TextStyle(color: Colors.grey.shade700),
-                        ),
+  controller: _ageController,
+  keyboardType: TextInputType.number,
+  textInputAction: TextInputAction.done,
+  onEditingComplete: _dismissKeyboard,
+  decoration: InputDecoration(
+    hintText: 'Enter age',
+    helperText: 'Tap away or press done to save',
+    helperStyle: TextStyle(
+      fontSize: 11,
+      color: Colors.grey.shade600,
+    ),
+    filled: true,
+    fillColor: Colors.grey.shade100,
+    suffixIcon: IconButton(
+      tooltip: 'Clear age',
+      icon: const Icon(Icons.clear),
+      onPressed: () {
+        setState(() {
+          _ageController.clear();
+        });
+      },
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+  ),
+  onChanged: (value) {
+    final parsed = int.tryParse(value);
+    if (parsed != null) {
+      setState(() {
+        age = parsed;
+      });
+    }
+  },
+),
                       ],
                     ),
                   ),

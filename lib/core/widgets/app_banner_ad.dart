@@ -12,7 +12,7 @@ class _AppBannerAdState extends State<AppBannerAd> {
   BannerAd? _bannerAd;
   bool _loaded = false;
 
-  static const String _adUnitId = 'ca-app-pub-3940256099942544/2934735716';
+  static const String _adUnitId = 'ca-app-pub-6683665885451621/5649466122';
 
   @override
   void initState() {
