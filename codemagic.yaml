@@ -45,7 +45,8 @@ workflows:
 
       - name: Build signed IPA
         script: |
-          flutter build ipa --release --verbose --export-options-plist=/Users/builder/export_options.plist
+          flutter config --no-enable-swift-package-manager
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
