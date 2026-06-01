@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -13,6 +14,7 @@ class AppInterstitialAd {
       'ca-app-pub-6683665885451621/8459172347';
 
   static void load() {
+    if (kIsWeb) return;
     if (_isLoading || _ad != null) return;
 
     _isLoading = true;
@@ -36,6 +38,8 @@ class AppInterstitialAd {
   }
 
   static Future<void> show(BuildContext context) async {
+    if (kIsWeb) return;
+
     if (_ad == null) {
       load();
       return;

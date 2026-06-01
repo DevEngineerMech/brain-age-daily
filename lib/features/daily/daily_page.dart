@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/game_ids.dart';
 import '../../core/models/daily_session_result.dart';
@@ -9,12 +12,14 @@ import '../../core/services/admob_service.dart';
 import '../../core/services/brain_age_service.dart';
 import '../../core/services/stats_service.dart';
 import '../../core/widgets/app_interstitial_ad.dart';
+import '../../core/widgets/app_rewarded_ad.dart';
 
 import '../games/quick_math/quick_math_questions.dart';
 import '../games/time_difference/time_difference_questions.dart';
 import '../games/antonyms/antonyms_questions.dart';
 import '../games/science_quiz/science_quiz_questions.dart';
 import '../games/biology_quiz/biology_quiz_questions.dart';
+import '../games/focus_count/focus_count_questions.dart';
 import '../games/word_snap/word_snap_questions.dart';
 import '../games/word_scramble/word_scramble_questions.dart';
 import '../games/stroop_shift/stroop_shift_questions.dart';
@@ -37,6 +42,10 @@ class DailyPage extends StatefulWidget {
 
 class _DailyPageState extends State<DailyPage> {
   static const int secondsPerGame = 40;
+  static const int maxHearts = 3;
+
+  static const String _heartsKey = 'daily_hearts';
+  static const String _lastHeartRegenKey = 'daily_last_heart_regen_ms';
 
   final DailyEngine _engine = DailyEngine();
   final Random _random = Random();
@@ -49,6 +58,7 @@ class _DailyPageState extends State<DailyPage> {
   int _score = 0;
   int _correct = 0;
   int _attempts = 0;
+  int _heartsLeft = maxHearts;
 
   Timer? _timer;
 
@@ -72,8 +82,12 @@ class _DailyPageState extends State<DailyPage> {
   void initState() {
     super.initState();
     _games = _engine.getTodayGames();
+
     AdMobService.initialize();
     AppInterstitialAd.load();
+    AppRewardedAd.load();
+
+    _loadHearts();
     _startGame();
   }
 
@@ -81,6 +95,101 @@ class _DailyPageState extends State<DailyPage> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadHearts() async {
+    if (kIsWeb) {
+      if (!mounted) return;
+      setState(() {
+        _heartsLeft = maxHearts;
+      });
+      return;
+    }
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    int hearts = prefs.getInt(_heartsKey) ?? maxHearts;
+    final int nowMs = DateTime.now().millisecondsSinceEpoch;
+    final int? lastRegenMs = prefs.getInt(_lastHeartRegenKey);
+
+    if (lastRegenMs == null) {
+      await prefs.setInt(_lastHeartRegenKey, nowMs);
+    } else if (hearts < maxHearts) {
+      final int elapsedMs = nowMs - lastRegenMs;
+      final int daysPassed = elapsedMs ~/ const Duration(hours: 24).inMilliseconds;
+
+      if (daysPassed > 0) {
+        hearts += daysPassed;
+        if (hearts > maxHearts) hearts = maxHearts;
+
+        final int newLastRegenMs =
+            lastRegenMs + (daysPassed * const Duration(hours: 24).inMilliseconds);
+
+        await prefs.setInt(_heartsKey, hearts);
+        await prefs.setInt(_lastHeartRegenKey, newLastRegenMs);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _heartsLeft = hearts.clamp(0, maxHearts).toInt();
+    });
+  }
+
+  Future<void> _saveHearts(int hearts) async {
+    if (kIsWeb) {
+      setState(() {
+        _heartsLeft = maxHearts;
+      });
+      return;
+    }
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int safeHearts = hearts.clamp(0, maxHearts).toInt();
+
+    await prefs.setInt(_heartsKey, safeHearts);
+
+    if (safeHearts < maxHearts) {
+      await prefs.setInt(
+        _lastHeartRegenKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _heartsLeft = safeHearts;
+    });
+  }
+
+  Future<void> _watchAdForHeart() async {
+    if (_heartsLeft >= maxHearts) return;
+
+    final bool earnedReward = await AppRewardedAd.show();
+
+    if (!mounted) return;
+
+    if (earnedReward) {
+      final int newHearts = (_heartsLeft + 1).clamp(0, maxHearts).toInt();
+      await _saveHearts(newHearts);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❤️ +1 Heart'),
+          duration: Duration(milliseconds: 900),
+        ),
+      );
+    } else {
+      AppRewardedAd.load();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad not ready yet. Try again soon.'),
+          duration: Duration(milliseconds: 900),
+        ),
+      );
+    }
   }
 
   void _startGame() {
@@ -222,6 +331,18 @@ class _DailyPageState extends State<DailyPage> {
       _question = q.scrambled;
       _options = List<String>.from(q.options)..shuffle(_random);
       _answer = q.answer;
+      return;
+    }
+
+    if (game == GameIds.focusCount) {
+      final FocusCountQuestion q = FocusCountQuestions.random(_random);
+
+      _instruction = q.instruction;
+      _question = q.grid.join('   ');
+      _options = FocusCountQuestions.optionsFor(q, _random)
+          .map((value) => value.toString())
+          .toList();
+      _answer = q.answer.toString();
       return;
     }
 
@@ -606,7 +727,9 @@ class _DailyPageState extends State<DailyPage> {
                         children: [
                           DailyHeader(
                             onBack: () => Navigator.pop(context),
-                            heartsLeft: 3,
+                            heartsLeft: _heartsLeft,
+                            onWatchAdForHeart:
+                                _heartsLeft < maxHearts ? _watchAdForHeart : null,
                           ),
                           SizedBox(height: compact ? 18 : 24),
                           DailyStepProgress(

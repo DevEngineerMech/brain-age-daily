@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_interstitial_ad.dart';
@@ -24,6 +25,9 @@ class _TimedFreePlayAdWrapperState extends State<TimedFreePlayAdWrapper> {
   @override
   void initState() {
     super.initState();
+
+    if (kIsWeb) return;
+
     AppInterstitialAd.load();
     _scheduleNextAd();
   }
@@ -35,11 +39,13 @@ class _TimedFreePlayAdWrapperState extends State<TimedFreePlayAdWrapper> {
   }
 
   Duration _randomDelay() {
-    final int seconds = 60 + _random.nextInt(61); // 60–120 seconds
+    final int seconds = 60 + _random.nextInt(61);
     return Duration(seconds: seconds);
   }
 
   void _scheduleNextAd() {
+    if (kIsWeb) return;
+
     _timer?.cancel();
 
     _timer = Timer(_randomDelay(), () async {

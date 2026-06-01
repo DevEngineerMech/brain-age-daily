@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -17,6 +18,8 @@ class _AppBannerAdState extends State<AppBannerAd> {
   @override
   void initState() {
     super.initState();
+
+    if (kIsWeb) return;
 
     _bannerAd = BannerAd(
       adUnitId: _adUnitId,
@@ -42,6 +45,8 @@ class _AppBannerAdState extends State<AppBannerAd> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) return const SizedBox.shrink();
+
     if (!_loaded || _bannerAd == null) {
       return const SizedBox.shrink();
     }

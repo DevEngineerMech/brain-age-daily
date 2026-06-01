@@ -43,7 +43,7 @@ class _FreePlayPageState extends State<FreePlayPage> {
   }
 
   int _randomTarget() {
-    return 5 + _random.nextInt(6); // 5 to 10
+    return 5 + _random.nextInt(6);
   }
 
   Widget _pageForGame(String gameId) {
@@ -104,8 +104,8 @@ class _FreePlayPageState extends State<FreePlayPage> {
       context,
       MaterialPageRoute(
         builder: (_) => TimedFreePlayAdWrapper(
-  child: _pageForGame(gameId),
-),
+          child: _pageForGame(gameId),
+        ),
       ),
     );
   }
@@ -119,115 +119,119 @@ class _FreePlayPageState extends State<FreePlayPage> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFF0A1020),
-              Color(0xFF11182B),
-              Color(0xFF1A2250),
+              Color(0xFF4B0B8F),
+              Color(0xFF6413A8),
+              Color(0xFF7C20C8),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: gameIds.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Free Play',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final String gameId = gameIds[index - 1];
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Material(
-                        color: Colors.transparent,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: gameIds.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
+                    children: [
+                      Material(
+                        color: Colors.white.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(16),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(22),
-                          onTap: () => _openGame(context, gameId),
-                          child: Ink(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1B2344),
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.10),
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 10,
-                                  offset: Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF6C63FF)
-                                        .withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(
-                                    Icons.extension_rounded,
-                                    color: Color(0xFF8F88FF),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    GameIds.label(gameId),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: Colors.white54,
-                                ),
-                              ],
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => Navigator.pop(context),
+                          child: const SizedBox(
+                            width: 46,
+                            height: 46,
+                            child: Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 30,
                             ),
                           ),
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Free Play',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final String gameId = gameIds[index - 1];
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => _openGame(context, gameId),
+                    child: Ink(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.16),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 14,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD247).withOpacity(0.22),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.extension_rounded,
+                              color: Color(0xFFFFD247),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              GameIds.label(gameId),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFFFFD247),
+                            size: 30,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),

@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 class DailyHeader extends StatelessWidget {
   final VoidCallback onBack;
   final int heartsLeft;
+  final VoidCallback? onWatchAdForHeart;
 
   const DailyHeader({
+    super.key,
     required this.onBack,
     required this.heartsLeft,
+    this.onWatchAdForHeart,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool canWatchAd = onWatchAdForHeart != null;
+
     return Row(
       children: [
         Material(
@@ -42,31 +47,46 @@ class DailyHeader extends StatelessWidget {
             ),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
+        Material(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.18),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Text(
-                '❤️',
-                style: TextStyle(fontSize: 18),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$heartsLeft',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
+            onTap: canWatchAd ? onWatchAdForHeart : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.18),
                 ),
               ),
-            ],
+              child: Row(
+                children: [
+                  const Text(
+                    '❤️',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$heartsLeft',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (canWatchAd) ...[
+                    const SizedBox(width: 7),
+                    const Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: Color(0xFFFFD247),
+                      size: 21,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -80,6 +100,7 @@ class DailyStepProgress extends StatelessWidget {
   final double progress;
 
   const DailyStepProgress({
+    super.key,
     required this.gamesCount,
     required this.activeIndex,
     required this.progress,
@@ -166,6 +187,7 @@ class DailyQuestionCard extends StatelessWidget {
   final ValueChanged<int>? onMemoryGridTap;
 
   const DailyQuestionCard({
+    super.key,
     required this.title,
     required this.instruction,
     required this.question,
@@ -181,6 +203,10 @@ class DailyQuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool looksLikeFocusCount =
+        question.split(RegExp(r'\s+')).where((e) => e.trim().isNotEmpty).length >
+            8;
+
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
@@ -281,6 +307,8 @@ class DailyQuestionCard extends StatelessWidget {
                   showingPattern: memoryGridShowingPattern,
                   onTap: onMemoryGridTap,
                 )
+              else if (question.isNotEmpty && looksLikeFocusCount)
+                DailyFocusCountGrid(question: question)
               else if (question.isNotEmpty)
                 FittedBox(
                   fit: BoxFit.scaleDown,
@@ -356,6 +384,62 @@ class DailyQuestionCard extends StatelessWidget {
   }
 }
 
+class DailyFocusCountGrid extends StatelessWidget {
+  final String question;
+
+  const DailyFocusCountGrid({
+    super.key,
+    required this.question,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> symbols = question
+        .split(RegExp(r'\s+'))
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3E8FF),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFF7B22C9).withOpacity(0.18),
+        ),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: symbols.map((symbol) {
+          return Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF7B22C9).withOpacity(0.12),
+              ),
+            ),
+            child: Text(
+              symbol,
+              style: const TextStyle(
+                color: Color(0xFF4C1179),
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 class DailyMemoryGridBoard extends StatelessWidget {
   final List<int> pattern;
   final Set<int> selected;
@@ -363,6 +447,7 @@ class DailyMemoryGridBoard extends StatelessWidget {
   final ValueChanged<int>? onTap;
 
   const DailyMemoryGridBoard({
+    super.key,
     required this.pattern,
     required this.selected,
     required this.showingPattern,
@@ -416,6 +501,7 @@ class DailyAnswerButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const DailyAnswerButton({
+    super.key,
     required this.text,
     required this.onPressed,
   });
@@ -462,6 +548,7 @@ class DailyBottomStatCard extends StatelessWidget {
   final String value;
 
   const DailyBottomStatCard({
+    super.key,
     required this.icon,
     required this.label,
     required this.value,
@@ -511,13 +598,15 @@ class DailyBottomStatCard extends StatelessWidget {
 }
 
 class DailySparklesBackground extends StatelessWidget {
-  const DailySparklesBackground();
+  const DailySparklesBackground({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
+    return const IgnorePointer(
       child: Stack(
-        children: const [
+        children: [
           Positioned(
             top: 120,
             left: 20,
@@ -554,6 +643,7 @@ class DailySparkle extends StatelessWidget {
   final double opacity;
 
   const DailySparkle({
+    super.key,
     required this.size,
     required this.opacity,
   });
