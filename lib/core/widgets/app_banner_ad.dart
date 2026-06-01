@@ -21,20 +21,45 @@ class _AppBannerAdState extends State<AppBannerAd> {
 
     if (kIsWeb) return;
 
+    _loadBanner();
+  }
+
+  void _loadBanner() {
+    _bannerAd?.dispose();
+
     _bannerAd = BannerAd(
       adUnitId: _adUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (_) {
-          if (mounted) setState(() => _loaded = true);
+        onAdLoaded: (ad) {
+          debugPrint('Banner loaded');
+          if (mounted) {
+            setState(() {
+              _loaded = true;
+            });
+          }
         },
         onAdFailedToLoad: (ad, error) {
-          ad.dispose();
           debugPrint('Banner failed: $error');
+          ad.dispose();
+
+          if (mounted) {
+            setState(() {
+              _loaded = false;
+              _bannerAd = null;
+            });
+          }
+
+          Future.delayed(const Duration(seconds: 10), () {
+            if (!mounted) return;
+            _loadBanner();
+          });
         },
       ),
-    )..load();
+    );
+
+    _bannerAd!.load();
   }
 
   @override
@@ -48,13 +73,16 @@ class _AppBannerAdState extends State<AppBannerAd> {
     if (kIsWeb) return const SizedBox.shrink();
 
     if (!_loaded || _bannerAd == null) {
-      return const SizedBox.shrink();
+      return const SizedBox(height: 0);
     }
 
-    return SizedBox(
-      width: _bannerAd!.size.width.toDouble(),
-      height: _bannerAd!.size.height.toDouble(),
-      child: AdWidget(ad: _bannerAd!),
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        width: _bannerAd!.size.width.toDouble(),
+        height: _bannerAd!.size.height.toDouble(),
+        child: AdWidget(ad: _bannerAd!),
+      ),
     );
   }
 }

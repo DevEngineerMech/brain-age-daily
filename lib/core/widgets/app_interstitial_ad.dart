@@ -10,8 +10,7 @@ class AppInterstitialAd {
 
   static final ValueNotifier<bool> isShowingAd = ValueNotifier<bool>(false);
 
-  static const String _testAdUnitId =
-      'ca-app-pub-6683665885451621/8459172347';
+  static const String _adUnitId = 'ca-app-pub-6683665885451621/8459172347';
 
   static void load() {
     if (kIsWeb) return;
@@ -20,18 +19,22 @@ class AppInterstitialAd {
     _isLoading = true;
 
     InterstitialAd.load(
-      adUnitId: _testAdUnitId,
+      adUnitId: _adUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (InterstitialAd ad) {
+          debugPrint('Interstitial loaded');
           _ad = ad;
           _isLoading = false;
-          debugPrint('Interstitial loaded');
         },
         onAdFailedToLoad: (LoadAdError error) {
+          debugPrint('Interstitial failed: $error');
           _ad = null;
           _isLoading = false;
-          debugPrint('Interstitial failed: $error');
+
+          Future.delayed(const Duration(seconds: 10), () {
+            load();
+          });
         },
       ),
     );
@@ -57,18 +60,26 @@ class AppInterstitialAd {
       onAdDismissedFullScreenContent: (InterstitialAd ad) {
         ad.dispose();
         isShowingAd.value = false;
-        if (!completer.isCompleted) completer.complete();
         load();
+
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
       },
       onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
+        debugPrint('Interstitial show failed: $error');
         ad.dispose();
         isShowingAd.value = false;
-        if (!completer.isCompleted) completer.complete();
         load();
+
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
       },
     );
 
     adToShow.show();
+
     await completer.future;
   }
 }

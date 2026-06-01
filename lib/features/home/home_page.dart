@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/daily_hearts_service.dart';
+import '../../core/widgets/app_banner_ad.dart';
 import '../../core/widgets/app_rewarded_ad.dart';
 import '../daily/daily_page.dart';
 import '../free_play/free_play_page.dart';
+import '../stats/stats_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -66,9 +68,7 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     if (!canPlay) {
-      setState(() {
-        _hearts = 0;
-      });
+      setState(() => _hearts = 0);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -83,9 +83,7 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
-    setState(() {
-      _hearts = hearts;
-    });
+    setState(() => _hearts = hearts);
 
     await Navigator.push(
       context,
@@ -100,9 +98,7 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
-    setState(() {
-      _hearts = refreshedHearts;
-    });
+    setState(() => _hearts = refreshedHearts);
   }
 
   Future<void> _watchAdForHeart() async {
@@ -128,9 +124,7 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
-    setState(() {
-      _hearts = hearts;
-    });
+    setState(() => _hearts = hearts);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -158,9 +152,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _watchAdButton() {
-    final bool canWatch = _hearts < DailyHeartsService.maxHearts;
-
-    if (!canWatch) {
+    if (_hearts >= DailyHeartsService.maxHearts) {
       return const SizedBox.shrink();
     }
 
@@ -285,9 +277,7 @@ class _HomePageState extends State<HomePage> {
             },
             decoration: InputDecoration(
               suffixIcon: IconButton(
-                onPressed: () {
-                  _ageController.clear();
-                },
+                onPressed: () => _ageController.clear(),
                 icon: const Icon(Icons.close_rounded),
               ),
               border: OutlineInputBorder(
@@ -390,130 +380,67 @@ class _HomePageState extends State<HomePage> {
             color: Color(0xFF625BEA),
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Brain Age Daily',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 26),
-                  _brainAgeCard(),
-                  const SizedBox(height: 20),
-                  _ageCard(),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      _menuCard(
-                        icon: Icons.sports_esports_rounded,
-                        title: 'Free Play',
-                        subtitle: 'Unlimited training',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const FreePlayPage(),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Brain Age Daily',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
                             ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 18),
-                      _menuCard(
-                        icon: Icons.trending_up_rounded,
-                        title: 'Progress',
-                        subtitle: 'Graphs & stats',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const _ProgressPlaceholderPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressPlaceholderPage extends StatelessWidget {
-  const _ProgressPlaceholderPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF625BEA),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Material(
-                    color: Colors.white.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => Navigator.pop(context),
-                      child: const SizedBox(
-                        width: 46,
-                        height: 46,
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
-                          size: 30,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 26),
+                        _brainAgeCard(),
+                        const SizedBox(height: 20),
+                        _ageCard(),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            _menuCard(
+                              icon: Icons.sports_esports_rounded,
+                              title: 'Free Play',
+                              subtitle: 'Unlimited training',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const FreePlayPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 18),
+                            _menuCard(
+                              icon: Icons.trending_up_rounded,
+                              title: 'Progress',
+                              subtitle: 'Graphs & stats',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const StatsPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Progress',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
                 ),
-                child: const Text(
-                  'Progress stats will appear here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF202024),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+                const AppBannerAd(),
+              ],
+            ),
           ),
         ),
       ),

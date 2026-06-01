@@ -39,7 +39,7 @@ class _TimedFreePlayAdWrapperState extends State<TimedFreePlayAdWrapper> {
   }
 
   Duration _randomDelay() {
-    final int seconds = 60 + _random.nextInt(61);
+    final int seconds = 55 + _random.nextInt(31);
     return Duration(seconds: seconds);
   }
 
