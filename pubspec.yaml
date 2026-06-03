@@ -2,7 +2,7 @@ name: brainagedaily
 description: Brain Age Daily App
 publish_to: 'none'
 
-version: 1.0.10+41
+version: 1.0.21.1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
