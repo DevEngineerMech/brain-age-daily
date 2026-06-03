@@ -2,155 +2,215 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../constants/game_ids.dart';
 import '../models/daily_session_result.dart';
-import '../models/game_result.dart';
-import '../models/stored_stats.dart';
 
 class StatsService {
-  static const String _latestBrainAgeKey = 'latest_brain_age';
-  static const String _totalChecksKey = 'total_checks';
-  static const String _currentStreakKey = 'current_streak';
-  static const String _brainAgeHistoryKey = 'brain_age_history';
-  static const String _responseHistoryKey = 'response_history';
-  static const String _dailySessionsKey = 'daily_sessions';
+  static const String _dailySessionsKey = 'daily_sessions_v2';
 
-  static String _gameStatsKey(String gameId) => 'game_stats_$gameId';
-
-  static Future<int> getLatestBrainAge() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_latestBrainAgeKey) ?? 40;
+  static bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  static Future<int> getTotalChecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_totalChecksKey) ?? 0;
-  }
-
-  static Future<int> getCurrentStreak() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_currentStreakKey) ?? 0;
-  }
-
-  static Future<List<int>> getBrainAgeHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_brainAgeHistoryKey) ?? <String>[];
-    return raw.map((e) => int.tryParse(e) ?? 40).toList();
-  }
-
-  static Future<List<double>> getResponseTimeHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_responseHistoryKey) ?? <String>[];
-    return raw.map((e) => double.tryParse(e) ?? 0).toList();
+  static DateTime _dateOnly(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
   }
 
   static Future<List<DailySessionResult>> getDailySessions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_dailySessionsKey) ?? <String>[];
-    return raw
-        .map((e) => DailySessionResult.fromJson(jsonDecode(e) as Map<String, dynamic>))
-        .toList();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> rawSessions = prefs.getStringList(_dailySessionsKey) ?? [];
+
+    final List<DailySessionResult> sessions = [];
+
+    for (final raw in rawSessions) {
+      try {
+        final Map<String, dynamic> json =
+            Map<String, dynamic>.from(jsonDecode(raw));
+        sessions.add(DailySessionResult.fromJson(json));
+      } catch (_) {
+        continue;
+      }
+    }
+
+    sessions.sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    return sessions;
   }
 
   static Future<void> saveDailySession(DailySessionResult session) async {
-    final prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    await prefs.setInt(_latestBrainAgeKey, session.brainAge);
+    final List<DailySessionResult> sessions = await getDailySessions();
 
-    final checks = (prefs.getInt(_totalChecksKey) ?? 0) + 1;
-    await prefs.setInt(_totalChecksKey, checks);
+    sessions.add(session);
+    sessions.sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
-    final streak = (prefs.getInt(_currentStreakKey) ?? 0) + 1;
-    await prefs.setInt(_currentStreakKey, streak);
+    final List<DailySessionResult> trimmedSessions =
+        sessions.take(180).toList();
 
-    final brainHistory = prefs.getStringList(_brainAgeHistoryKey) ?? <String>[];
-    brainHistory.add(session.brainAge.toString());
-    await prefs.setStringList(_brainAgeHistoryKey, brainHistory);
+    final List<String> encodedSessions = trimmedSessions
+        .map((item) => jsonEncode(item.toJson()))
+        .toList();
 
-    final responseHistory = prefs.getStringList(_responseHistoryKey) ?? <String>[];
-    responseHistory.add(session.averageResponseTime.toString());
-    await prefs.setStringList(_responseHistoryKey, responseHistory);
-
-    final dailySessions = prefs.getStringList(_dailySessionsKey) ?? <String>[];
-    dailySessions.add(jsonEncode(session.toJson()));
-    await prefs.setStringList(_dailySessionsKey, dailySessions);
-
-    for (final result in session.gameResults) {
-      await saveGameResult(result);
-    }
+    await prefs.setStringList(_dailySessionsKey, encodedSessions);
   }
 
-  static Future<void> saveGameResult(GameResult result) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = _gameStatsKey(result.gameId);
-    final raw = prefs.getStringList(key) ?? <String>[];
-    raw.add(jsonEncode(result.toJson()));
-    await prefs.setStringList(key, raw);
+  static Future<int> getLatestBrainAge() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    if (sessions.isEmpty) return 40;
+
+    return sessions.first.brainAge;
   }
 
-  static Future<List<GameResult>> getGameResults(String gameId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_gameStatsKey(gameId)) ?? <String>[];
-    return raw
-        .map((e) => GameResult.fromJson(jsonDecode(e) as Map<String, dynamic>))
+  static Future<int> getTotalChecks() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+    return sessions.length;
+  }
+
+  static Future<List<int>> getBrainAgeHistory() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    final List<DailySessionResult> ordered = sessions.reversed.toList();
+
+    return ordered.map((session) => session.brainAge).toList();
+  }
+
+  static Future<List<double>> getResponseTimeHistory() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    final List<DailySessionResult> ordered = sessions.reversed.toList();
+
+    return ordered
+        .map((session) => session.averageResponseTime / 1000)
         .toList();
   }
 
+  static Future<int> getCurrentStreak() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    if (sessions.isEmpty) return 0;
+
+    final Set<DateTime> completedDays = sessions
+        .map((session) => _dateOnly(session.completedAt))
+        .toSet();
+
+    DateTime checkDay = _dateOnly(DateTime.now());
+
+    if (!completedDays.contains(checkDay)) {
+      checkDay = checkDay.subtract(const Duration(days: 1));
+    }
+
+    int streak = 0;
+
+    while (completedDays.contains(checkDay)) {
+      streak++;
+      checkDay = checkDay.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  static Future<int> getLongestStreak() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    if (sessions.isEmpty) return 0;
+
+    final List<DateTime> dates = sessions
+        .map((session) => _dateOnly(session.completedAt))
+        .toSet()
+        .toList()
+      ..sort();
+
+    int longest = 1;
+    int current = 1;
+
+    for (int i = 1; i < dates.length; i++) {
+      final int gap = dates[i].difference(dates[i - 1]).inDays;
+
+      if (gap == 1) {
+        current++;
+      } else if (gap > 1) {
+        current = 1;
+      }
+
+      if (current > longest) {
+        longest = current;
+      }
+    }
+
+    return longest;
+  }
+
+  static Future<DailySessionResult?> getTodaySession() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+    final DateTime now = DateTime.now();
+
+    for (final session in sessions) {
+      if (_isSameDay(session.completedAt, now)) {
+        return session;
+      }
+    }
+
+    return null;
+  }
+
+    static Future<DailySessionResult?> getLatestSession() async {
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    if (sessions.isEmpty) return null;
+
+    return sessions.first;
+  }
+
   static Future<Map<String, dynamic>> getGameSummary(String gameId) async {
-    final results = await getGameResults(gameId);
+    final List<DailySessionResult> sessions = await getDailySessions();
+
+    final results = sessions
+        .expand((session) => session.gameResults)
+        .where((result) => result.gameId == gameId)
+        .toList();
 
     if (results.isEmpty) {
       return {
-        'gameId': gameId,
-        'label': GameIds.label(gameId),
+        'label': gameId,
         'plays': 0,
+        'bestScore': 0,
         'averageAccuracy': 0.0,
         'averageResponseTime': 0.0,
-        'bestScore': 0,
         'estimatedBrainAge': 40,
       };
     }
 
-    final plays = results.length;
-    final averageAccuracy =
-        results.map((e) => e.accuracy).fold<double>(0, (a, b) => a + b) / plays;
-    final averageResponseTime = results
-            .map((e) => e.averageResponseTimeMs)
+    final int plays = results.length;
+
+    final int bestScore = results
+        .map((result) => result.score)
+        .reduce((a, b) => a > b ? a : b);
+
+    final double averageAccuracy = results
+            .map((result) => result.accuracy)
             .fold<double>(0, (a, b) => a + b) /
         plays;
-    final bestScore =
-        results.map((e) => e.score).reduce((a, b) => a > b ? a : b);
 
-    int estimatedBrainAge = 40;
-    if (averageAccuracy >= 0.9) estimatedBrainAge -= 6;
-    if (averageResponseTime <= 1500) estimatedBrainAge -= 5;
-    if (bestScore >= 50) estimatedBrainAge -= 4;
-    if (estimatedBrainAge < 18) estimatedBrainAge = 18;
+    final double averageResponseTime = results
+            .map((result) => result.averageResponseTimeMs)
+            .fold<double>(0, (a, b) => a + b) /
+        plays;
+
+    final int estimatedBrainAge = await getLatestBrainAge();
 
     return {
-      'gameId': gameId,
-      'label': GameIds.label(gameId),
+      'label': gameId,
       'plays': plays,
+      'bestScore': bestScore,
       'averageAccuracy': averageAccuracy,
       'averageResponseTime': averageResponseTime,
-      'bestScore': bestScore,
       'estimatedBrainAge': estimatedBrainAge,
     };
   }
 
-  static Future<StoredStats> getStoredStats() async {
-    final latestBrainAge = await getLatestBrainAge();
-    final totalChecks = await getTotalChecks();
-    final currentStreak = await getCurrentStreak();
-    final brainAgeHistory = await getBrainAgeHistory();
-    final responseTimeHistory = await getResponseTimeHistory();
-
-    return StoredStats(
-      latestBrainAge: latestBrainAge,
-      totalChecks: totalChecks,
-      currentStreak: currentStreak,
-      brainAgeHistory: brainAgeHistory,
-      responseTimeHistory: responseTimeHistory,
-    );
+  static Future<void> clearStats() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_dailySessionsKey);
   }
 }
+  

@@ -1,6 +1,10 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'memory_grid_questions.dart';
 
@@ -12,13 +16,18 @@ class MemoryGridPage extends StatefulWidget {
 }
 
 class _MemoryGridPageState extends State<MemoryGridPage> {
+  static const String _ageKey = 'user_age';
+
   final Random _random = Random();
 
   late MemoryGridQuestion _question;
 
   int score = 0;
   int questionNumber = 1;
+  int userAge = 25;
+
   static const int maxQuestions = 10;
+  static const int baseShowMilliseconds = 1500;
 
   bool showPattern = true;
 
@@ -28,13 +37,58 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
   @override
   void initState() {
     super.initState();
-    _next();
+    _loadAgeThenStart();
   }
 
   @override
   void dispose() {
     hideTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadAgeThenStart() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
+
+    setState(() {
+      userAge = prefs.getInt(_ageKey) ?? 25;
+    });
+
+    _next();
+  }
+
+  int get _patternShowMilliseconds {
+    int bonusMilliseconds = 0;
+
+    if (userAge >= 25 && userAge < 45) {
+      bonusMilliseconds = 2000;
+    } else if (userAge >= 45 && userAge < 65) {
+      bonusMilliseconds = 4000;
+    } else if (userAge >= 65) {
+      bonusMilliseconds = 6000;
+    }
+
+    return baseShowMilliseconds + bonusMilliseconds;
+  }
+
+  String get _patternTimeText {
+    final double seconds = _patternShowMilliseconds / 1000;
+    if (seconds == seconds.roundToDouble()) {
+      return '${seconds.toInt()}s';
+    }
+
+    return '${seconds.toStringAsFixed(1)}s';
+  }
+
+  void _hidePatternNow() {
+    hideTimer?.cancel();
+
+    if (!mounted) return;
+
+    setState(() {
+      showPattern = false;
+    });
   }
 
   void _next() {
@@ -48,7 +102,7 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
 
     setState(() {});
 
-    hideTimer = Timer(const Duration(milliseconds: 1500), () {
+    hideTimer = Timer(Duration(milliseconds: _patternShowMilliseconds), () {
       if (!mounted) return;
       setState(() {
         showPattern = false;
@@ -210,9 +264,39 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
     );
   }
 
+  Widget _skipPatternButton() {
+    if (!showPattern) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: SizedBox(
+        height: 44,
+        child: OutlinedButton.icon(
+          onPressed: _hidePatternNow,
+          icon: const Icon(Icons.fast_forward_rounded, size: 18),
+          label: const Text('Skip and answer now'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF7B22C9),
+            side: const BorderSide(
+              color: Color(0xFF7B22C9),
+              width: 1.6,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _questionCard(bool compact) {
     final String instruction = showPattern
-        ? 'Remember the highlighted squares'
+        ? 'Remember the highlighted squares for $_patternTimeText'
         : 'Tap the squares that were highlighted';
 
     return Stack(
@@ -222,7 +306,7 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
         Container(
           width: double.infinity,
           constraints: BoxConstraints(
-            minHeight: compact ? 390 : 460,
+            minHeight: compact ? 430 : 500,
           ),
           margin: const EdgeInsets.only(top: 34),
           padding: EdgeInsets.fromLTRB(
@@ -299,6 +383,7 @@ class _MemoryGridPageState extends State<MemoryGridPage> {
                   },
                 ),
               ),
+              _skipPatternButton(),
             ],
           ),
         ),

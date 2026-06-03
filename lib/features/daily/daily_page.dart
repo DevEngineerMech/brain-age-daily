@@ -53,6 +53,8 @@ class _DailyPageState extends State<DailyPage> {
   late final List<String> _games;
   final List<GameResult> _results = <GameResult>[];
 
+  final List<QuestionResult> _questionResults = <QuestionResult>[];
+
   int _gameIndex = 0;
   int _timeLeft = secondsPerGame;
   int _score = 0;
@@ -561,6 +563,16 @@ class _DailyPageState extends State<DailyPage> {
 
       bool correct = true;
 
+      _questionResults.add(
+  QuestionResult(
+    gameId: _games[_gameIndex],
+    question: 'Repeat the sequence',
+    userAnswer: _orderRecallSelectedSequence.join(', '),
+    correctAnswer: _orderRecallAnswerSequence.join(', '),
+    isCorrect: correct,
+  ),
+);
+
       for (int i = 0; i < _orderRecallAnswerSequence.length; i++) {
         if (_orderRecallSelectedSequence[i] != _orderRecallAnswerSequence[i]) {
           correct = false;
@@ -588,12 +600,22 @@ class _DailyPageState extends State<DailyPage> {
 
     _attempts++;
 
-    final bool correct = selected == _answer;
+final bool correct = selected == _answer;
 
-    if (correct) {
-      _correct++;
-      _score++;
-    }
+_questionResults.add(
+  QuestionResult(
+    gameId: _games[_gameIndex],
+    question: _question,
+    userAnswer: selected,
+    correctAnswer: _answer,
+    isCorrect: correct,
+  ),
+);
+
+if (correct) {
+  _correct++;
+  _score++;
+}
 
     _showResultToast(correct);
 
@@ -603,82 +625,100 @@ class _DailyPageState extends State<DailyPage> {
   }
 
   Future<void> _finishGame() async {
-    _timer?.cancel();
+  _timer?.cancel();
 
-    _results.add(
-      GameResult(
-        gameId: _games[_gameIndex],
-        score: _score,
-        correct: _correct,
-        attempts: _attempts,
-        averageResponseTimeMs: 1200,
-        playedAt: DateTime.now(),
-      ),
-    );
+  final double elapsedMs =
+      ((secondsPerGame - _timeLeft).clamp(1, secondsPerGame) * 1000.0);
 
-    if (_gameIndex >= _games.length - 1) {
-      await _finishDaily();
-      return;
-    }
+  final double averageResponseTimeMs =
+      max(500.0, elapsedMs / max(1, _attempts));
 
-    if (_gameIndex == 2) {
-      await AppInterstitialAd.show(context);
-    }
+  _results.add(
+  GameResult(
+    gameId: _games[_gameIndex],
+    score: _score,
+    correct: _correct,
+    attempts: _attempts,
+    averageResponseTimeMs: averageResponseTimeMs,
+    playedAt: DateTime.now(),
+    questionResults: _questionResults
+        .where((result) => result.gameId == _games[_gameIndex])
+        .toList(),
+  ),
+);
 
-    if (!mounted) return;
-
-    setState(() {
-      _gameIndex++;
-    });
-
-    _startGame();
+  if (_gameIndex >= _games.length - 1) {
+    await _finishDaily();
+    return;
   }
+
+  if (_gameIndex == 2) {
+    await AppInterstitialAd.show(context);
+  }
+
+  if (!mounted) return;
+
+  setState(() {
+    _gameIndex++;
+  });
+
+  _startGame();
+}
 
   Future<void> _finishDaily() async {
-    final double accuracy = _results
-            .map((e) => e.accuracy)
-            .fold<double>(0, (a, b) => a + b) /
-        _results.length;
+  final double accuracy = _results
+          .map((e) => e.accuracy)
+          .fold<double>(0, (a, b) => a + b) /
+      _results.length;
 
-    final int totalScore =
-        _results.map((e) => e.score).fold<int>(0, (a, b) => a + b);
+  final int totalScore =
+      _results.map((e) => e.score).fold<int>(0, (a, b) => a + b);
 
-    final int brainAge = BrainAgeService.calculate(
-      accuracy: accuracy,
-      responseTime: 1200,
-      score: totalScore,
-    );
+  final double averageResponseTime = _results
+          .map((e) => e.averageResponseTimeMs)
+          .fold<double>(0, (a, b) => a + b) /
+      _results.length;
 
-    await StatsService.saveDailySession(
-      DailySessionResult(
-        gameResults: _results,
-        brainAge: brainAge,
-        completedAt: DateTime.now(),
+  final prefs = await SharedPreferences.getInstance();
+  final int userAge = prefs.getInt('user_age') ?? 25;
+
+  final int brainAge = BrainAgeService.calculate(
+    accuracy: accuracy,
+    responseTime: averageResponseTime,
+    score: totalScore,
+    chronologicalAge: userAge,
+  );
+
+  await StatsService.saveDailySession(
+    DailySessionResult(
+      gameResults: _results,
+      brainAge: brainAge,
+      completedAt: DateTime.now(),
+    ),
+  );
+
+  if (!mounted) return;
+
+  await showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
       ),
-    );
-
-    if (!mounted) return;
-
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+      title: const Text('Daily Complete'),
+      content: Text('Your Brain Age: $brainAge'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Done'),
         ),
-        title: const Text('Daily Complete'),
-        content: Text('Your Brain Age: $brainAge'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
+      ],
+    ),
+  );
 
-    if (!mounted) return;
-    Navigator.pop(context);
-  }
+  if (!mounted) return;
+  Navigator.pop(context);
+}
 
   @override
   Widget build(BuildContext context) {

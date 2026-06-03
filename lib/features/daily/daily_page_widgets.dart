@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 class DailyHeader extends StatelessWidget {
@@ -203,9 +205,7 @@ class DailyQuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool looksLikeFocusCount =
-        question.split(RegExp(r'\s+')).where((e) => e.trim().isNotEmpty).length >
-            8;
+    final bool isFocusCount = title.toLowerCase().contains('focus count');
 
     return Stack(
       clipBehavior: Clip.none,
@@ -214,7 +214,7 @@ class DailyQuestionCard extends StatelessWidget {
         Container(
           width: double.infinity,
           constraints: BoxConstraints(
-            minHeight: compact ? 300 : 370,
+            minHeight: compact ? 320 : 390,
           ),
           margin: const EdgeInsets.only(top: 34),
           padding: EdgeInsets.fromLTRB(
@@ -299,7 +299,7 @@ class DailyQuestionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: compact ? 28 : 42),
+              SizedBox(height: compact ? 24 : 34),
               if (memoryGridPattern.isNotEmpty)
                 DailyMemoryGridBoard(
                   pattern: memoryGridPattern,
@@ -307,20 +307,32 @@ class DailyQuestionCard extends StatelessWidget {
                   showingPattern: memoryGridShowingPattern,
                   onTap: onMemoryGridTap,
                 )
-              else if (question.isNotEmpty && looksLikeFocusCount)
+              else if (question.isNotEmpty && isFocusCount)
                 DailyFocusCountGrid(question: question)
               else if (question.isNotEmpty)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 18,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF7B22C9).withOpacity(0.18),
+                    ),
+                  ),
                   child: Text(
                     question,
                     textAlign: TextAlign.center,
-                    maxLines: 3,
+                    softWrap: true,
                     style: TextStyle(
                       color: questionColor ?? const Color(0xFF4C1179),
-                      fontSize: compact ? 38 : 46,
+                      fontSize: compact ? 24 : 28,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
+                      height: 1.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 )

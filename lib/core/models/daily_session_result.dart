@@ -11,37 +11,50 @@ class DailySessionResult {
     required this.completedAt,
   });
 
-  double get averageResponseTime {
-    if (gameResults.isEmpty) return 0;
-    final total = gameResults
-        .map((e) => e.averageResponseTimeMs)
-        .fold<double>(0, (a, b) => a + b);
-    return total / gameResults.length;
+  int get totalScore {
+    return gameResults.fold<int>(0, (total, result) => total + result.score);
+  }
+
+  int get totalCorrect {
+    return gameResults.fold<int>(0, (total, result) => total + result.correct);
+  }
+
+  int get totalAttempts {
+    return gameResults.fold<int>(0, (total, result) => total + result.attempts);
   }
 
   double get averageAccuracy {
     if (gameResults.isEmpty) return 0;
-    final total =
-        gameResults.map((e) => e.accuracy).fold<double>(0, (a, b) => a + b);
-    return total / gameResults.length;
+
+    return gameResults.fold<double>(
+          0,
+          (total, result) => total + result.accuracy,
+        ) /
+        gameResults.length;
   }
 
-  int get totalScore =>
-      gameResults.map((e) => e.score).fold<int>(0, (a, b) => a + b);
+  double get averageResponseTime {
+    if (gameResults.isEmpty) return 0;
+
+    return gameResults.fold<double>(
+          0,
+          (total, result) => total + result.averageResponseTimeMs,
+        ) /
+        gameResults.length;
+  }
 
   Map<String, dynamic> toJson() {
     return {
-      'gameResults': gameResults.map((e) => e.toJson()).toList(),
+      'gameResults': gameResults.map((result) => result.toJson()).toList(),
       'brainAge': brainAge,
       'completedAt': completedAt.toIso8601String(),
     };
   }
 
   factory DailySessionResult.fromJson(Map<String, dynamic> json) {
-    final rawResults = (json['gameResults'] as List?) ?? const [];
     return DailySessionResult(
-      gameResults: rawResults
-          .map((e) => GameResult.fromJson(Map<String, dynamic>.from(e)))
+      gameResults: (json['gameResults'] as List<dynamic>? ?? [])
+          .map((item) => GameResult.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
       brainAge: json['brainAge'] as int? ?? 40,
       completedAt: DateTime.tryParse(json['completedAt'] as String? ?? '') ??
