@@ -9,16 +9,20 @@ class TimeDifferencePage extends StatefulWidget {
   const TimeDifferencePage({super.key});
 
   @override
-  State<TimeDifferencePage> createState() => _TimeDifferencePageState();
+  State<TimeDifferencePage> createState() =>
+      _TimeDifferencePageState();
 }
 
-class _TimeDifferencePageState extends State<TimeDifferencePage> {
+class _TimeDifferencePageState
+    extends State<TimeDifferencePage> {
   final Random _random = Random();
 
   late TimeDifferenceQuestion _question;
+  late List<int> _options;
 
   int score = 0;
   int questionNumber = 1;
+
   static const int maxQuestions = 10;
 
   @override
@@ -28,16 +32,26 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
   }
 
   void _next() {
-    _question = TimeDifferenceQuestions
-        .all[_random.nextInt(TimeDifferenceQuestions.all.length)];
+    _question = TimeDifferenceQuestions.all[
+        _random.nextInt(
+          TimeDifferenceQuestions.all.length,
+        )];
 
-    setState(() {});
+    _options = _optionsFor(_question);
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
-  List<int> _optionsFor(TimeDifferenceQuestion question) {
-    final Set<int> options = <int>{question.minutes};
+  List<int> _optionsFor(
+    TimeDifferenceQuestion question,
+  ) {
+    final Set<int> options = <int>{
+      question.minutes,
+    };
 
-    final List<int> possibleOffsets = <int>[
+    final List<int> offsets = <int>[
       -30,
       -20,
       -15,
@@ -50,8 +64,10 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
       30,
     ]..shuffle(_random);
 
-    for (final int offset in possibleOffsets) {
-      final int option = question.minutes + offset;
+    for (final int offset in offsets) {
+      final int option =
+          question.minutes + offset;
+
       if (option > 0) {
         options.add(option);
       }
@@ -62,14 +78,13 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
     }
 
     while (options.length < 4) {
-      final int option = 10 + (_random.nextInt(18) * 5);
-      if (option > 0) {
-        options.add(option);
-      }
+      options.add(
+        10 + (_random.nextInt(18) * 5),
+      );
     }
 
-    final List<int> shuffled = options.toList()..shuffle(_random);
-    return shuffled;
+    return options.toList()
+      ..shuffle(_random);
   }
 
   void _tap(int minutes) {
@@ -107,14 +122,25 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
       builder: (_) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius:
+                BorderRadius.circular(24),
           ),
-          title: const Text('Round Complete'),
-          content: Text('You scored $score out of $maxQuestions.'),
+          title: const Text(
+            'Round Complete',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: Text(
+            'You scored $score out of $maxQuestions.',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Back'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('Done'),
             ),
             ElevatedButton(
               onPressed: _restart,
@@ -127,156 +153,187 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
   }
 
   Widget _header() {
-    return Row(
-      children: [
-        Material(
-          color: Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => Navigator.pop(context),
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius:
+                BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius:
+                  BorderRadius.circular(13),
+              onTap: () =>
+                  Navigator.pop(context),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Time Difference',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Time Difference',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _progress() {
     return Row(
-      children: List.generate(maxQuestions, (index) {
-        final bool active = index + 1 == questionNumber;
-        final bool done = index + 1 < questionNumber;
+      children: List.generate(
+        maxQuestions,
+        (index) {
+          final bool active =
+              index + 1 == questionNumber;
 
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 10,
-            margin: const EdgeInsets.symmetric(horizontal: 2.5),
-            decoration: BoxDecoration(
-              color: active || done
-                  ? const Color(0xFFFFD247)
-                  : Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(999),
+          final bool done =
+              index + 1 < questionNumber;
+
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 180,
+              ),
+              height: 7,
+              margin:
+                  const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              decoration: BoxDecoration(
+                color: active || done
+                    ? const Color(0xFFFFD247)
+                    : Colors.white
+                        .withOpacity(0.18),
+                borderRadius:
+                    BorderRadius.circular(999),
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
-  Widget _questionCard(bool compact) {
+  Widget _questionCard(
+    bool compact,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
         Container(
           width: double.infinity,
-          constraints: BoxConstraints(
-            minHeight: compact ? 300 : 370,
+          height: double.infinity,
+          margin: const EdgeInsets.only(
+            top: 25,
           ),
-          margin: const EdgeInsets.only(top: 34),
           padding: EdgeInsets.fromLTRB(
-            24,
-            compact ? 52 : 62,
-            24,
-            compact ? 28 : 34,
+            18,
+            compact ? 38 : 42,
+            18,
+            14,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius:
+                BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
+                color:
+                    Colors.black.withOpacity(
+                  0.18,
+                ),
+                blurRadius: 16,
+                offset:
+                    const Offset(0, 8),
               ),
             ],
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               const Text(
                 'Time Difference',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF55178A),
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
+                  color:
+                      Color(0xFF55178A),
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 'How many minutes elapsed?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF55178A).withOpacity(0.76),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  height: 1.25,
+                  color:
+                      const Color(
+                        0xFF55178A,
+                      ).withOpacity(0.72),
+                  fontSize: 13,
+                  fontWeight:
+                      FontWeight.w600,
                 ),
               ),
-              SizedBox(height: compact ? 38 : 64),
+              const Spacer(),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  '${_question.from} → ${_question.to}',
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
+                  '${_question.from}  →  ${_question.to}',
+                  textAlign:
+                      TextAlign.center,
+                  maxLines: 1,
                   style: TextStyle(
-                    color: const Color(0xFF4C1179),
-                    fontSize: compact ? 36 : 44,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.8,
+                    color:
+                        const Color(
+                      0xFF4C1179,
+                    ),
+                    fontSize:
+                        compact ? 32 : 38,
+                    fontWeight:
+                        FontWeight.w900,
                   ),
                 ),
               ),
+              const Spacer(),
             ],
           ),
         ),
         Container(
-          width: 78,
-          height: 78,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF7B22C9),
+            color:
+                const Color(0xFF7B22C9),
             border: Border.all(
               color: Colors.white,
-              width: 5,
+              width: 4,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
-          child: const Center(
-            child: Text(
-              '⭐',
-              style: TextStyle(fontSize: 34),
+          alignment: Alignment.center,
+          child: const Text(
+            '⭐',
+            style: TextStyle(
+              fontSize: 24,
             ),
           ),
         ),
@@ -284,61 +341,104 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
     );
   }
 
-  Widget _answerButton(int minutes) {
+  Widget _answerButton(
+    int minutes,
+  ) {
     return SizedBox(
-      width: double.infinity,
-      height: 64,
+      height: 48,
       child: ElevatedButton(
-        onPressed: () => _tap(minutes),
+        onPressed:
+            () => _tap(minutes),
         style: ElevatedButton.styleFrom(
-          elevation: 7,
-          shadowColor: const Color(0xFFFFC93A).withOpacity(0.45),
-          backgroundColor: const Color(0xFFFFD247),
-          foregroundColor: const Color(0xFF35125A),
+          elevation: 4,
+          backgroundColor:
+              const Color(0xFFFFD247),
+          foregroundColor:
+              const Color(0xFF35125A),
+          padding:
+              const EdgeInsets.symmetric(
+            horizontal: 6,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-            side: const BorderSide(
-              color: Color(0xFFFFF0A6),
-              width: 1.4,
-            ),
+            borderRadius:
+                BorderRadius.circular(14),
           ),
         ),
-        child: Text(
-          '$minutes mins',
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '$minutes mins',
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight:
+                  FontWeight.w900,
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _answerGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: _options.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 48,
+      ),
+      itemBuilder: (_, index) {
+        return _answerButton(
+          _options[index],
+        );
+      },
+    );
+  }
+
   Widget _scoreCard() {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 44,
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.11),
-        borderRadius: BorderRadius.circular(18),
+        color:
+            Colors.white.withOpacity(
+          0.11,
+        ),
+        borderRadius:
+            BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withOpacity(0.22),
+          color:
+              Colors.white.withOpacity(
+            0.20,
+          ),
         ),
       ),
       child: Row(
         children: [
           const Text(
             '🏆',
-            style: TextStyle(fontSize: 24),
+            style:
+                TextStyle(fontSize: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Score',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                fontWeight:
+                    FontWeight.w900,
               ),
             ),
           ),
@@ -346,8 +446,9 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
             '$score',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
+              fontSize: 19,
+              fontWeight:
+                  FontWeight.w900,
             ),
           ),
         ],
@@ -356,51 +457,75 @@ class _TimeDifferencePageState extends State<TimeDifferencePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final List<int> options = _optionsFor(_question);
-
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       body: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool compact = constraints.maxHeight < 760;
+        builder:
+            (context, constraints) {
+          final bool compact =
+              constraints.maxHeight <
+                  760;
 
           return Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration:
+                const BoxDecoration(
               gradient: LinearGradient(
                 colors: [
                   Color(0xFF4B0B8F),
                   Color(0xFF6413A8),
                   Color(0xFF7C20C8),
                 ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin:
+                    Alignment.topCenter,
+                end:
+                    Alignment.bottomCenter,
               ),
             ),
             child: SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  compact ? 10 : 16,
-                  18,
-                  20,
+              child: Padding(
+                padding:
+                    const EdgeInsets
+                        .fromLTRB(
+                  12,
+                  8,
+                  12,
+                  8,
                 ),
                 child: Column(
                   children: [
                     _header(),
-                    SizedBox(height: compact ? 18 : 24),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
                     _progress(),
-                    SizedBox(height: compact ? 28 : 38),
-                    _questionCard(compact),
-                    SizedBox(height: compact ? 22 : 30),
-                    ...options.map(
-                      (option) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _answerButton(option),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    Expanded(
+                      child:
+                          _questionCard(
+                        compact,
                       ),
                     ),
-                    SizedBox(height: compact ? 10 : 18),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    _answerGrid(),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
                     _scoreCard(),
                   ],
                 ),

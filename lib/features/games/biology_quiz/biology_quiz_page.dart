@@ -9,16 +9,20 @@ class BiologyQuizPage extends StatefulWidget {
   const BiologyQuizPage({super.key});
 
   @override
-  State<BiologyQuizPage> createState() => _BiologyQuizPageState();
+  State<BiologyQuizPage> createState() =>
+      _BiologyQuizPageState();
 }
 
-class _BiologyQuizPageState extends State<BiologyQuizPage> {
+class _BiologyQuizPageState
+    extends State<BiologyQuizPage> {
   final Random _random = Random();
 
   late BiologyQuizQuestion _question;
+  late List<String> _options;
 
   int score = 0;
   int questionNumber = 1;
+
   static const int maxQuestions = 10;
 
   @override
@@ -28,10 +32,18 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
   }
 
   void _next() {
-    _question = BiologyQuizQuestions
-        .all[_random.nextInt(BiologyQuizQuestions.all.length)];
+    _question = BiologyQuizQuestions.all[
+        _random.nextInt(
+          BiologyQuizQuestions.all.length,
+        )];
 
-    setState(() {});
+    _options = List<String>.from(
+      _question.options,
+    )..shuffle(_random);
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _tap(String value) {
@@ -71,12 +83,22 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          title: const Text('Round Complete'),
-          content: Text('You scored $score out of $maxQuestions.'),
+          title: const Text(
+            'Round Complete',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: Text(
+            'You scored $score out of $maxQuestions.',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Back'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('Done'),
             ),
             ElevatedButton(
               onPressed: _restart,
@@ -89,61 +111,73 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
   }
 
   Widget _header() {
-    return Row(
-      children: [
-        Material(
-          color: Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => Navigator.pop(context),
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(13),
+              onTap: () => Navigator.pop(context),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Biology Quiz',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Biology Quiz',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _progress() {
     return Row(
-      children: List.generate(maxQuestions, (index) {
-        final bool active = index + 1 == questionNumber;
-        final bool done = index + 1 < questionNumber;
+      children: List.generate(
+        maxQuestions,
+        (index) {
+          final bool active =
+              index + 1 == questionNumber;
+          final bool done =
+              index + 1 < questionNumber;
 
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 10,
-            margin: const EdgeInsets.symmetric(horizontal: 2.5),
-            decoration: BoxDecoration(
-              color: active || done
-                  ? const Color(0xFFFFD247)
-                  : Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(999),
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 180,
+              ),
+              height: 7,
+              margin: const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              decoration: BoxDecoration(
+                color: active || done
+                    ? const Color(0xFFFFD247)
+                    : Colors.white.withOpacity(0.18),
+                borderRadius:
+                    BorderRadius.circular(999),
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
@@ -154,94 +188,87 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
       children: [
         Container(
           width: double.infinity,
-          constraints: BoxConstraints(
-            minHeight: compact ? 310 : 390,
-          ),
-          margin: const EdgeInsets.only(top: 34),
+          height: double.infinity,
+          margin: const EdgeInsets.only(top: 25),
           padding: EdgeInsets.fromLTRB(
-            24,
-            compact ? 52 : 62,
-            24,
-            compact ? 28 : 34,
+            16,
+            compact ? 38 : 42,
+            16,
+            14,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               const Text(
                 'Biology Quiz',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xFF55178A),
-                  fontSize: 25,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 'Choose the correct answer',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF55178A).withOpacity(0.76),
-                  fontSize: 16,
+                  color: const Color(0xFF55178A)
+                      .withOpacity(0.72),
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  height: 1.25,
                 ),
               ),
-              SizedBox(height: compact ? 34 : 54),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width - 90,
-                  child: Text(
-                    _question.question,
-                    textAlign: TextAlign.center,
-                    maxLines: 5,
-                    style: TextStyle(
-                      color: const Color(0xFF4C1179),
-                      fontSize: compact ? 28 : 34,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                ),
+                child: Text(
+                  _question.question,
+                  textAlign: TextAlign.center,
+                  maxLines: compact ? 5 : 6,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: const Color(0xFF4C1179),
+                    fontSize: compact ? 22 : 25,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
                   ),
                 ),
               ),
+              const Spacer(),
             ],
           ),
         ),
         Container(
-          width: 78,
-          height: 78,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF7B22C9),
             border: Border.all(
               color: Colors.white,
-              width: 5,
+              width: 4,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
-          child: const Center(
-            child: Text(
-              '⭐',
-              style: TextStyle(fontSize: 34),
+          alignment: Alignment.center,
+          child: const Text(
+            '⭐',
+            style: TextStyle(
+              fontSize: 24,
             ),
           ),
         ),
@@ -251,21 +278,21 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
 
   Widget _answerButton(String text) {
     return SizedBox(
-      width: double.infinity,
-      height: 64,
+      height: 48,
       child: ElevatedButton(
         onPressed: () => _tap(text),
         style: ElevatedButton.styleFrom(
-          elevation: 7,
-          shadowColor: const Color(0xFFFFC93A).withOpacity(0.45),
-          backgroundColor: const Color(0xFFFFD247),
-          foregroundColor: const Color(0xFF35125A),
+          elevation: 4,
+          backgroundColor:
+              const Color(0xFFFFD247),
+          foregroundColor:
+              const Color(0xFF35125A),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 6,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-            side: const BorderSide(
-              color: Color(0xFFFFF0A6),
-              width: 1.4,
-            ),
+            borderRadius:
+                BorderRadius.circular(14),
           ),
         ),
         child: FittedBox(
@@ -273,8 +300,9 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
           child: Text(
             text,
             textAlign: TextAlign.center,
+            maxLines: 2,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -283,30 +311,54 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
     );
   }
 
+  Widget _answerGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: _options.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 48,
+      ),
+      itemBuilder: (_, index) {
+        return _answerButton(
+          _options[index],
+        );
+      },
+    );
+  }
+
   Widget _scoreCard() {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 44,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.11),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withOpacity(0.22),
+          color: Colors.white.withOpacity(0.20),
         ),
       ),
       child: Row(
         children: [
           const Text(
             '🏆',
-            style: TextStyle(fontSize: 24),
+            style: TextStyle(fontSize: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Score',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 19,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -315,7 +367,7 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
             '$score',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 25,
+              fontSize: 19,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -328,8 +380,12 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool compact = constraints.maxHeight < 760;
+        builder: (
+          context,
+          constraints,
+        ) {
+          final bool compact =
+              constraints.maxHeight < 760;
 
           return Container(
             width: double.infinity,
@@ -346,28 +402,30 @@ class _BiologyQuizPageState extends State<BiologyQuizPage> {
               ),
             ),
             child: SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  compact ? 10 : 16,
-                  18,
-                  20,
+              child: Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  8,
                 ),
                 child: Column(
                   children: [
                     _header(),
-                    SizedBox(height: compact ? 18 : 24),
+                    const SizedBox(height: 8),
                     _progress(),
-                    SizedBox(height: compact ? 28 : 38),
-                    _questionCard(compact),
-                    SizedBox(height: compact ? 22 : 30),
-                    ..._question.options.map(
-                      (option) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _answerButton(option),
+                    const SizedBox(height: 8),
+
+                    Expanded(
+                      child: _questionCard(
+                        compact,
                       ),
                     ),
-                    SizedBox(height: compact ? 10 : 18),
+
+                    const SizedBox(height: 8),
+                    _answerGrid(),
+                    const SizedBox(height: 8),
                     _scoreCard(),
                   ],
                 ),

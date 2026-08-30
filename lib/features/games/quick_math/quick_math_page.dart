@@ -20,6 +20,7 @@ class _QuickMathPageState extends State<QuickMathPage> {
 
   int score = 0;
   int questionNumber = 1;
+
   static const int maxQuestions = 10;
 
   @override
@@ -39,13 +40,18 @@ class _QuickMathPageState extends State<QuickMathPage> {
         QuickMathQuestions.all[_random.nextInt(QuickMathQuestions.all.length)];
 
     _controller.clear();
-    setState(() {});
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _submit() {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final int? value = int.tryParse(_controller.text.trim());
+    final int? value = int.tryParse(
+      _controller.text.trim(),
+    );
 
     if (value == _question.answer) {
       score++;
@@ -83,12 +89,22 @@ class _QuickMathPageState extends State<QuickMathPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          title: const Text('Round Complete'),
-          content: Text('You scored $score out of $maxQuestions.'),
+          title: const Text(
+            'Round Complete',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: Text(
+            'You scored $score out of $maxQuestions.',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Back'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('Done'),
             ),
             ElevatedButton(
               onPressed: _restart,
@@ -101,61 +117,74 @@ class _QuickMathPageState extends State<QuickMathPage> {
   }
 
   Widget _header() {
-    return Row(
-      children: [
-        Material(
-          color: Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => Navigator.pop(context),
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(13),
+              onTap: () => Navigator.pop(context),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Quick Math',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Quick Math',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _progress() {
     return Row(
-      children: List.generate(maxQuestions, (index) {
-        final bool active = index + 1 == questionNumber;
-        final bool done = index + 1 < questionNumber;
+      children: List.generate(
+        maxQuestions,
+        (index) {
+          final bool active =
+              index + 1 == questionNumber;
 
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 10,
-            margin: const EdgeInsets.symmetric(horizontal: 2.5),
-            decoration: BoxDecoration(
-              color: active || done
-                  ? const Color(0xFFFFD247)
-                  : Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(999),
+          final bool done =
+              index + 1 < questionNumber;
+
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 180,
+              ),
+              height: 7,
+              margin: const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              decoration: BoxDecoration(
+                color: active || done
+                    ? const Color(0xFFFFD247)
+                    : Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
@@ -166,91 +195,85 @@ class _QuickMathPageState extends State<QuickMathPage> {
       children: [
         Container(
           width: double.infinity,
-          constraints: BoxConstraints(
-            minHeight: compact ? 300 : 370,
+          height: double.infinity,
+          margin: const EdgeInsets.only(
+            top: 25,
           ),
-          margin: const EdgeInsets.only(top: 34),
           padding: EdgeInsets.fromLTRB(
-            24,
-            compact ? 52 : 62,
-            24,
-            compact ? 28 : 34,
+            18,
+            compact ? 38 : 42,
+            18,
+            16,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               const Text(
                 'Quick Math',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xFF55178A),
-                  fontSize: 25,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 'Solve as fast as you can',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF55178A).withOpacity(0.76),
-                  fontSize: 16,
+                  color: const Color(0xFF55178A)
+                      .withOpacity(0.72),
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  height: 1.25,
                 ),
               ),
-              SizedBox(height: compact ? 34 : 58),
+              const Spacer(),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   _question.text,
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   style: TextStyle(
                     color: const Color(0xFF4C1179),
-                    fontSize: compact ? 46 : 58,
+                    fontSize: compact ? 44 : 52,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.8,
                   ),
                 ),
               ),
+              const Spacer(),
             ],
           ),
         ),
         Container(
-          width: 78,
-          height: 78,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF7B22C9),
             border: Border.all(
               color: Colors.white,
-              width: 5,
+              width: 4,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
-          child: const Center(
-            child: Text(
-              '⭐',
-              style: TextStyle(fontSize: 34),
+          alignment: Alignment.center,
+          child: const Text(
+            '⭐',
+            style: TextStyle(
+              fontSize: 24,
             ),
           ),
         ),
@@ -258,82 +281,66 @@ class _QuickMathPageState extends State<QuickMathPage> {
     );
   }
 
-  Widget _answerInput() {
-    return Column(
+  Widget _answerArea() {
+    return Row(
       children: [
-        TextField(
-          controller: _controller,
-          keyboardType: TextInputType.number,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submit(),
-          style: const TextStyle(
-            color: Color(0xFF35125A),
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            hintText: 'Answer',
-            hintStyle: TextStyle(
-              color: const Color(0xFF35125A).withOpacity(0.45),
-              fontWeight: FontWeight.w700,
-            ),
-            suffixIcon: IconButton(
-              icon: const Icon(
-                Icons.check_circle_rounded,
-                color: Color(0xFF7B22C9),
+        Expanded(
+          child: SizedBox(
+            height: 50,
+            child: TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              style: const TextStyle(
+                color: Color(0xFF35125A),
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
               ),
-              onPressed: _submit,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 18,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.22),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.22),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(
-                color: Color(0xFFFFD247),
-                width: 2,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                hintText: 'Answer',
+                hintStyle: TextStyle(
+                  color: const Color(0xFF35125A)
+                      .withOpacity(0.40),
+                  fontWeight: FontWeight.w700,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius:
+                      BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(width: 8),
         SizedBox(
-          width: double.infinity,
-          height: 64,
+          width: 120,
+          height: 50,
           child: ElevatedButton(
             onPressed: _submit,
             style: ElevatedButton.styleFrom(
-              elevation: 7,
-              shadowColor: const Color(0xFFFFC93A).withOpacity(0.45),
-              backgroundColor: const Color(0xFFFFD247),
-              foregroundColor: const Color(0xFF35125A),
+              elevation: 4,
+              backgroundColor:
+                  const Color(0xFFFFD247),
+              foregroundColor:
+                  const Color(0xFF35125A),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-                side: const BorderSide(
-                  color: Color(0xFFFFF0A6),
-                  width: 1.4,
-                ),
+                borderRadius:
+                    BorderRadius.circular(15),
               ),
             ),
             child: const Text(
               'Submit',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 17,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -345,28 +352,30 @@ class _QuickMathPageState extends State<QuickMathPage> {
 
   Widget _scoreCard() {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 44,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.11),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withOpacity(0.22),
+          color: Colors.white.withOpacity(0.20),
         ),
       ),
       child: Row(
         children: [
           const Text(
             '🏆',
-            style: TextStyle(fontSize: 24),
+            style: TextStyle(fontSize: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Score',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 19,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -375,7 +384,7 @@ class _QuickMathPageState extends State<QuickMathPage> {
             '$score',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 25,
+              fontSize: 19,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -387,12 +396,14 @@ class _QuickMathPageState extends State<QuickMathPage> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      onTap: () =>
+          FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         body: LayoutBuilder(
           builder: (context, constraints) {
-            final bool compact = constraints.maxHeight < 760;
+            final bool compact =
+                constraints.maxHeight < 760;
 
             return Container(
               width: double.infinity,
@@ -409,25 +420,32 @@ class _QuickMathPageState extends State<QuickMathPage> {
                 ),
               ),
               child: SafeArea(
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    18,
-                    compact ? 10 : 16,
-                    18,
-                    20,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    12,
+                    8,
+                    12,
+                    8,
                   ),
                   child: Column(
                     children: [
                       _header(),
-                      SizedBox(height: compact ? 18 : 24),
+                      const SizedBox(height: 8),
                       _progress(),
-                      SizedBox(height: compact ? 28 : 38),
-                      _questionCard(compact),
-                      SizedBox(height: compact ? 22 : 30),
-                      _answerInput(),
-                      SizedBox(height: compact ? 10 : 18),
+                      const SizedBox(height: 8),
+
+                      Expanded(
+                        child: _questionCard(
+                          compact,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      _answerArea(),
+
+                      const SizedBox(height: 8),
+
                       _scoreCard(),
                     ],
                   ),

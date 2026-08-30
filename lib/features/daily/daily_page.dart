@@ -41,19 +41,28 @@ class DailyPage extends StatefulWidget {
 }
 
 class _DailyPageState extends State<DailyPage> {
-  static const int secondsPerGame = 40;
+  static const int secondsPerGame = 25;
   static const int maxHearts = 3;
 
-  static const String _heartsKey = 'daily_hearts';
-  static const String _lastHeartRegenKey = 'daily_last_heart_regen_ms';
+  static const String _heartsKey =
+      'daily_hearts';
 
-  final DailyEngine _engine = DailyEngine();
-  final Random _random = Random();
+  static const String _lastHeartRegenKey =
+      'daily_last_heart_regen_ms';
+
+  final DailyEngine _engine =
+      DailyEngine();
+
+  final Random _random =
+      Random();
 
   late final List<String> _games;
-  final List<GameResult> _results = <GameResult>[];
 
-  final List<QuestionResult> _questionResults = <QuestionResult>[];
+  final List<GameResult> _results =
+      <GameResult>[];
+
+  final List<QuestionResult> _questionResults =
+      <QuestionResult>[];
 
   int _gameIndex = 0;
   int _timeLeft = secondsPerGame;
@@ -68,24 +77,40 @@ class _DailyPageState extends State<DailyPage> {
   String _instruction = '';
   List<String> _options = <String>[];
   String _answer = '';
+
   Color? _questionColor;
 
   bool _orderRecallShowingSequence = false;
+
   String _orderRecallInput = '';
-  List<String> _orderRecallAnswerSequence = <String>[];
-  List<String> _orderRecallSelectedSequence = <String>[];
-  List<String> _orderRecallSelectableOptions = <String>[];
+
+  List<String> _orderRecallAnswerSequence =
+      <String>[];
+
+  List<String> _orderRecallSelectedSequence =
+      <String>[];
+
+  List<String> _orderRecallSelectableOptions =
+      <String>[];
 
   bool _memoryGridShowingPattern = false;
-  List<int> _memoryGridPattern = <int>[];
-  final Set<int> _memoryGridSelected = <int>{};
+
+  List<int> _memoryGridPattern =
+      <int>[];
+
+  final Set<int> _memoryGridSelected =
+      <int>{};
+
+  bool _finishingGame = false;
 
   @override
   void initState() {
     super.initState();
+
     _games = _engine.getTodayGames();
 
     AdMobService.initialize();
+
     AppInterstitialAd.load();
     AppRewardedAd.load();
 
@@ -102,93 +127,176 @@ class _DailyPageState extends State<DailyPage> {
   Future<void> _loadHearts() async {
     if (kIsWeb) {
       if (!mounted) return;
+
       setState(() {
         _heartsLeft = maxHearts;
       });
+
       return;
     }
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
 
-    int hearts = prefs.getInt(_heartsKey) ?? maxHearts;
-    final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int? lastRegenMs = prefs.getInt(_lastHeartRegenKey);
+    int hearts =
+        prefs.getInt(_heartsKey) ??
+            maxHearts;
+
+    final int nowMs =
+        DateTime.now().millisecondsSinceEpoch;
+
+    final int? lastRegenMs =
+        prefs.getInt(
+      _lastHeartRegenKey,
+    );
 
     if (lastRegenMs == null) {
-      await prefs.setInt(_lastHeartRegenKey, nowMs);
+      await prefs.setInt(
+        _lastHeartRegenKey,
+        nowMs,
+      );
     } else if (hearts < maxHearts) {
-      final int elapsedMs = nowMs - lastRegenMs;
-      final int daysPassed = elapsedMs ~/ const Duration(hours: 24).inMilliseconds;
+      final int elapsedMs =
+          nowMs - lastRegenMs;
+
+      final int daysPassed =
+          elapsedMs ~/
+              const Duration(
+                hours: 24,
+              ).inMilliseconds;
 
       if (daysPassed > 0) {
         hearts += daysPassed;
-        if (hearts > maxHearts) hearts = maxHearts;
+
+        if (hearts > maxHearts) {
+          hearts = maxHearts;
+        }
 
         final int newLastRegenMs =
-            lastRegenMs + (daysPassed * const Duration(hours: 24).inMilliseconds);
+            lastRegenMs +
+                (
+                  daysPassed *
+                      const Duration(
+                        hours: 24,
+                      ).inMilliseconds
+                );
 
-        await prefs.setInt(_heartsKey, hearts);
-        await prefs.setInt(_lastHeartRegenKey, newLastRegenMs);
+        await prefs.setInt(
+          _heartsKey,
+          hearts,
+        );
+
+        await prefs.setInt(
+          _lastHeartRegenKey,
+          newLastRegenMs,
+        );
       }
     }
 
     if (!mounted) return;
+
     setState(() {
-      _heartsLeft = hearts.clamp(0, maxHearts).toInt();
+      _heartsLeft =
+          hearts
+              .clamp(
+                0,
+                maxHearts,
+              )
+              .toInt();
     });
   }
 
-  Future<void> _saveHearts(int hearts) async {
+  Future<void> _saveHearts(
+    int hearts,
+  ) async {
     if (kIsWeb) {
       setState(() {
         _heartsLeft = maxHearts;
       });
+
       return;
     }
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final int safeHearts = hearts.clamp(0, maxHearts).toInt();
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
 
-    await prefs.setInt(_heartsKey, safeHearts);
+    final int safeHearts =
+        hearts
+            .clamp(
+              0,
+              maxHearts,
+            )
+            .toInt();
+
+    await prefs.setInt(
+      _heartsKey,
+      safeHearts,
+    );
 
     if (safeHearts < maxHearts) {
       await prefs.setInt(
         _lastHeartRegenKey,
-        DateTime.now().millisecondsSinceEpoch,
+        DateTime.now()
+            .millisecondsSinceEpoch,
       );
     }
 
     if (!mounted) return;
+
     setState(() {
-      _heartsLeft = safeHearts;
+      _heartsLeft =
+          safeHearts;
     });
   }
 
   Future<void> _watchAdForHeart() async {
-    if (_heartsLeft >= maxHearts) return;
+    if (_heartsLeft >= maxHearts) {
+      return;
+    }
 
-    final bool earnedReward = await AppRewardedAd.show();
+    final bool earnedReward =
+        await AppRewardedAd.show();
 
     if (!mounted) return;
 
     if (earnedReward) {
-      final int newHearts = (_heartsLeft + 1).clamp(0, maxHearts).toInt();
-      await _saveHearts(newHearts);
+      final int newHearts =
+          (_heartsLeft + 1)
+              .clamp(
+                0,
+                maxHearts,
+              )
+              .toInt();
+
+      await _saveHearts(
+        newHearts,
+      );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
-          content: Text('❤️ +1 Heart'),
-          duration: Duration(milliseconds: 900),
+          content: Text(
+            '❤️ +1 Heart',
+          ),
+          duration: Duration(
+            milliseconds: 900,
+          ),
         ),
       );
     } else {
       AppRewardedAd.load();
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
-          content: Text('Ad not ready yet. Try again soon.'),
-          duration: Duration(milliseconds: 900),
+          content: Text(
+            'Ad not ready yet. Try again soon.',
+          ),
+          duration: Duration(
+            milliseconds: 900,
+          ),
         ),
       );
     }
@@ -199,21 +307,26 @@ class _DailyPageState extends State<DailyPage> {
     _correct = 0;
     _attempts = 0;
     _timeLeft = secondsPerGame;
+    _finishingGame = false;
 
     _nextQuestion();
 
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
 
-      setState(() {
-        _timeLeft--;
-      });
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        if (!mounted) return;
 
-      if (_timeLeft <= 0) {
-        _finishGame();
-      }
-    });
+        setState(() {
+          _timeLeft--;
+        });
+
+        if (_timeLeft <= 0) {
+          _finishGame();
+        }
+      },
+    );
 
     setState(() {});
   }
@@ -221,29 +334,52 @@ class _DailyPageState extends State<DailyPage> {
   void _resetSpecialGameState() {
     _questionColor = null;
 
-    _orderRecallShowingSequence = false;
-    _orderRecallInput = '';
-    _orderRecallAnswerSequence = <String>[];
-    _orderRecallSelectedSequence = <String>[];
-    _orderRecallSelectableOptions = <String>[];
+    _orderRecallShowingSequence =
+        false;
 
-    _memoryGridShowingPattern = false;
-    _memoryGridPattern = <int>[];
+    _orderRecallInput = '';
+
+    _orderRecallAnswerSequence =
+        <String>[];
+
+    _orderRecallSelectedSequence =
+        <String>[];
+
+    _orderRecallSelectableOptions =
+        <String>[];
+
+    _memoryGridShowingPattern =
+        false;
+
+    _memoryGridPattern =
+        <int>[];
+
     _memoryGridSelected.clear();
   }
 
   void _nextQuestion() {
-    final String game = _games[_gameIndex];
+    final String game =
+        _games[_gameIndex];
 
     _resetSpecialGameState();
 
     if (game == GameIds.quickMath) {
       final QuickMathQuestion q =
-          QuickMathQuestions.all[_random.nextInt(QuickMathQuestions.all.length)];
+          QuickMathQuestions.all[
+            _random.nextInt(
+              QuickMathQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Solve as fast as you can';
+      _instruction =
+          'Solve as fast as you can';
+
       _question = q.text;
-      _answer = '${q.answer}';
+
+      _answer =
+          '${q.answer}';
+
       _options = <String>[
         '${q.answer}',
         '${q.answer + 1}',
@@ -252,270 +388,602 @@ class _DailyPageState extends State<DailyPage> {
       ].toSet().toList();
 
       while (_options.length < 4) {
-        _options.add('${q.answer + _options.length + 3}');
+        _options.add(
+          '${q.answer + _options.length + 3}',
+        );
       }
 
-      _options.shuffle(_random);
+      _options.shuffle(
+        _random,
+      );
+
       return;
     }
 
-    if (game == GameIds.timeDifference) {
-      final TimeDifferenceQuestion q = TimeDifferenceQuestions
-          .all[_random.nextInt(TimeDifferenceQuestions.all.length)];
+    if (game ==
+        GameIds.timeDifference) {
+      final TimeDifferenceQuestion q =
+          TimeDifferenceQuestions.all[
+            _random.nextInt(
+              TimeDifferenceQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'How many minutes elapsed?';
-      _question = '${q.from} → ${q.to}';
-      _answer = '${q.minutes}';
+      _instruction =
+          'How many minutes elapsed?';
+
+      _question =
+          '${q.from} → ${q.to}';
+
+      _answer =
+          '${q.minutes}';
+
       _options = <String>[
         '${q.minutes}',
         '${q.minutes + 5}',
         '${q.minutes - 5}',
         '${q.minutes + 10}',
-      ].where((e) => int.tryParse(e) != null && int.parse(e) >= 0).toSet().toList();
+      ]
+          .where(
+            (e) =>
+                int.tryParse(e) !=
+                    null &&
+                int.parse(e) >= 0,
+          )
+          .toSet()
+          .toList();
 
       while (_options.length < 4) {
-        _options.add('${q.minutes + (_options.length * 15)}');
+        _options.add(
+          '${q.minutes + (_options.length * 15)}',
+        );
       }
 
-      _options.shuffle(_random);
+      _options.shuffle(
+        _random,
+      );
+
       return;
     }
 
-    if (game == GameIds.antonyms) {
+    if (game ==
+        GameIds.antonyms) {
       final AntonymQuestion q =
-          AntonymQuestions.all[_random.nextInt(AntonymQuestions.all.length)];
+          AntonymQuestions.all[
+            _random.nextInt(
+              AntonymQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Choose the opposite meaning';
-      _question = q.word;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Choose the opposite meaning';
+
+      _question =
+          q.word;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.scienceQuiz) {
-      final ScienceQuizQuestion q = ScienceQuizQuestions
-          .all[_random.nextInt(ScienceQuizQuestions.all.length)];
+    if (game ==
+        GameIds.scienceQuiz) {
+      final ScienceQuizQuestion q =
+          ScienceQuizQuestions.all[
+            _random.nextInt(
+              ScienceQuizQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Choose the correct answer';
-      _question = q.question;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Choose the correct answer';
+
+      _question =
+          q.question;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.biologyQuiz) {
-      final BiologyQuizQuestion q = BiologyQuizQuestions
-          .all[_random.nextInt(BiologyQuizQuestions.all.length)];
+    if (game ==
+        GameIds.biologyQuiz) {
+      final BiologyQuizQuestion q =
+          BiologyQuizQuestions.all[
+            _random.nextInt(
+              BiologyQuizQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Choose the correct answer';
-      _question = q.question;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Choose the correct answer';
+
+      _question =
+          q.question;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.wordSnap) {
+    if (game ==
+        GameIds.wordSnap) {
       final WordSnapQuestion q =
-          WordSnapQuestions.all[_random.nextInt(WordSnapQuestions.all.length)];
+          WordSnapQuestions.all[
+            _random.nextInt(
+              WordSnapQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Choose the correct category';
-      _question = q.word;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Choose the correct category';
+
+      _question =
+          q.word;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.wordScramble) {
-      final WordScrambleQuestion q = WordScrambleQuestions
-          .all[_random.nextInt(WordScrambleQuestions.all.length)];
+    if (game ==
+        GameIds.wordScramble) {
+      final WordScrambleQuestion q =
+          WordScrambleQuestions.all[
+            _random.nextInt(
+              WordScrambleQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Unscramble the word';
-      _question = q.scrambled;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Unscramble the word';
+
+      _question =
+          q.scrambled;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.focusCount) {
-      final FocusCountQuestion q = FocusCountQuestions.random(_random);
+    if (game ==
+        GameIds.focusCount) {
+      final FocusCountQuestion q =
+          FocusCountQuestions.random(
+        _random,
+      );
 
-      _instruction = q.instruction;
-      _question = q.grid.join('   ');
-      _options = FocusCountQuestions.optionsFor(q, _random)
-          .map((value) => value.toString())
-          .toList();
-      _answer = q.answer.toString();
+      _instruction =
+          q.instruction;
+
+      _question =
+          q.grid.join('   ');
+
+      _options =
+          FocusCountQuestions
+              .optionsFor(
+                q,
+                _random,
+              )
+              .map(
+                (value) =>
+                    value.toString(),
+              )
+              .toList();
+
+      _answer =
+          q.answer.toString();
+
       return;
     }
 
-    if (game == GameIds.stroopShift) {
-      final StroopShiftQuestion q = StroopShiftQuestions
-          .all[_random.nextInt(StroopShiftQuestions.all.length)];
+    if (game ==
+        GameIds.stroopShift) {
+      final StroopShiftQuestion q =
+          StroopShiftQuestions.all[
+            _random.nextInt(
+              StroopShiftQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'TAP THE COLOUR OF THE TEXT, NOT THE WORD';
-      _question = q.word;
-      _questionColor = _colourForName(q.inkColour);
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'TAP THE COLOUR OF THE TEXT, NOT THE WORD';
+
+      _question =
+          q.word;
+
+      _questionColor =
+          _colourForName(
+        q.inkColour,
+      );
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.reactionSwitch) {
-      final ReactionSwitchQuestion q = ReactionSwitchQuestions
-          .all[_random.nextInt(ReactionSwitchQuestions.all.length)];
+    if (game ==
+        GameIds.reactionSwitch) {
+      final ReactionSwitchQuestion q =
+          ReactionSwitchQuestions.all[
+            _random.nextInt(
+              ReactionSwitchQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = q.prompt;
-      _question = q.display;
-      _options = <String>['YES', 'NO']..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          q.prompt;
+
+      _question =
+          q.display;
+
+      _options = <String>[
+        'YES',
+        'NO',
+      ]..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.sudoku) {
+    if (game ==
+        GameIds.sudoku) {
       final SudokuQuestion q =
-          SudokuQuestions.all[_random.nextInt(SudokuQuestions.all.length)];
+          SudokuQuestions.all[
+            _random.nextInt(
+              SudokuQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Fill the missing number';
-      _question = q.row;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Fill the missing number';
+
+      _question =
+          q.row;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.symbolMatch) {
-      final SymbolMatchQuestion q = SymbolMatchQuestions
-          .all[_random.nextInt(SymbolMatchQuestions.all.length)];
+    if (game ==
+        GameIds.symbolMatch) {
+      final SymbolMatchQuestion q =
+          SymbolMatchQuestions.all[
+            _random.nextInt(
+              SymbolMatchQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Tap the matching symbol';
-      _question = q.target;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'Tap the matching symbol';
+
+      _question =
+          q.target;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.patternLogic) {
-      final PatternLogicQuestion q = PatternLogicQuestion.generate();
+    if (game ==
+        GameIds.patternLogic) {
+      final PatternLogicQuestion q =
+          PatternLogicQuestion.generate();
 
-      _instruction = 'What comes next?';
-      _question = q.sequence;
-      _options = List<String>.from(q.options)..shuffle(_random);
-      _answer = q.answer;
+      _instruction =
+          'What comes next?';
+
+      _question =
+          q.sequence;
+
+      _options =
+          List<String>.from(
+        q.options,
+      )..shuffle(_random);
+
+      _answer =
+          q.answer;
+
       return;
     }
 
-    if (game == GameIds.memoryGrid) {
-      final MemoryGridQuestion q = MemoryGridQuestions
-          .all[_random.nextInt(MemoryGridQuestions.all.length)];
+    if (game ==
+        GameIds.memoryGrid) {
+      final MemoryGridQuestion q =
+          MemoryGridQuestions.all[
+            _random.nextInt(
+              MemoryGridQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Remember the highlighted squares';
+      _instruction =
+          'Remember the highlighted squares';
+
       _question = '';
-      _options = <String>[];
-      _answer = q.pattern.join(',');
-      _memoryGridPattern = List<int>.from(q.pattern);
-      _memoryGridSelected.clear();
-      _memoryGridShowingPattern = true;
 
-      Future.delayed(const Duration(milliseconds: 1300), () {
-        if (!mounted) return;
-        if (_games[_gameIndex] != GameIds.memoryGrid) return;
+      _options =
+          <String>[];
 
-        setState(() {
-          _memoryGridShowingPattern = false;
-          _instruction = 'Tap the squares that were highlighted';
-        });
-      });
+      _answer =
+          q.pattern.join(',');
+
+      _memoryGridPattern =
+          List<int>.from(
+        q.pattern,
+      );
+
+      _memoryGridSelected
+          .clear();
+
+      _memoryGridShowingPattern =
+          true;
+
+      Future.delayed(
+        const Duration(
+          milliseconds: 1300,
+        ),
+        () {
+          if (!mounted) return;
+
+          if (_games[_gameIndex] !=
+              GameIds.memoryGrid) {
+            return;
+          }
+
+          setState(() {
+            _memoryGridShowingPattern =
+                false;
+
+            _instruction =
+                'Tap the squares that were highlighted';
+          });
+        },
+      );
 
       return;
     }
 
-    if (game == GameIds.orderRecall) {
-      final OrderRecallQuestion q = OrderRecallQuestions
-          .all[_random.nextInt(OrderRecallQuestions.all.length)];
+    if (game ==
+        GameIds.orderRecall) {
+      final OrderRecallQuestion q =
+          OrderRecallQuestions.all[
+            _random.nextInt(
+              OrderRecallQuestions
+                  .all.length,
+            )
+          ];
 
-      _instruction = 'Remember the order';
-      _question = q.shown.join('   ');
+      _instruction =
+          'Remember the order';
+
+      _question =
+          q.shown.join('   ');
+
       _orderRecallAnswerSequence =
-          q.answer.map((number) => number.toString()).toList();
+          q.answer
+              .map(
+                (number) =>
+                    number.toString(),
+              )
+              .toList();
+
       _orderRecallSelectableOptions =
-          q.shown.map((number) => number.toString()).toList()..shuffle(_random);
-      _orderRecallSelectedSequence = <String>[];
+          q.shown
+              .map(
+                (number) =>
+                    number.toString(),
+              )
+              .toList()
+            ..shuffle(_random);
+
+      _orderRecallSelectedSequence =
+          <String>[];
+
       _orderRecallInput = '';
-      _options = <String>['OK'];
-      _answer = _orderRecallAnswerSequence.join('|');
-      _orderRecallShowingSequence = true;
+
+      _options =
+          <String>['OK'];
+
+      _answer =
+          _orderRecallAnswerSequence
+              .join('|');
+
+      _orderRecallShowingSequence =
+          true;
+
       return;
     }
 
     _instruction = 'Ready?';
     _question = 'Ready?';
-    _options = <String>['OK'];
+
+    _options =
+        <String>['OK'];
+
     _answer = 'OK';
   }
 
-  Color _colourForName(String name) {
+  Color _colourForName(
+    String name,
+  ) {
     switch (name) {
       case 'Red':
         return Colors.red;
+
       case 'Blue':
         return Colors.blue;
+
       case 'Green':
         return Colors.green;
+
       case 'Yellow':
         return Colors.orange;
+
       case 'Purple':
         return Colors.purple;
+
       case 'Orange':
         return Colors.deepOrange;
+
       default:
         return Colors.black;
     }
   }
 
-  void _showResultToast(bool correct) {
+  void _showResultToast(
+    bool correct,
+  ) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(correct ? '✅ Correct' : '❌ Wrong'),
-          duration: const Duration(milliseconds: 450),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor:
-              correct ? const Color(0xFF26B957) : const Color(0xFFE94D5F),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          content: Text(
+            correct
+                ? '✅ Correct'
+                : '❌ Wrong',
           ),
-          margin: const EdgeInsets.all(16),
+          duration:
+              const Duration(
+            milliseconds: 450,
+          ),
+          behavior:
+              SnackBarBehavior.floating,
+          backgroundColor: correct
+              ? const Color(
+                  0xFF26B957,
+                )
+              : const Color(
+                  0xFFE94D5F,
+                ),
+          shape:
+              RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(
+              16,
+            ),
+          ),
+          margin:
+              const EdgeInsets.all(
+            16,
+          ),
         ),
       );
   }
 
-  void _tapMemoryGridTile(int index) {
-    if (_games[_gameIndex] != GameIds.memoryGrid) return;
-    if (_memoryGridShowingPattern) return;
-    if (_memoryGridSelected.contains(index)) return;
+  void _tapMemoryGridTile(
+    int index,
+  ) {
+    if (_games[_gameIndex] !=
+        GameIds.memoryGrid) {
+      return;
+    }
+
+    if (_memoryGridShowingPattern) {
+      return;
+    }
+
+    if (_memoryGridSelected
+        .contains(index)) {
+      return;
+    }
 
     setState(() {
-      _memoryGridSelected.add(index);
+      _memoryGridSelected.add(
+        index,
+      );
     });
 
-    final bool correctTile = _memoryGridPattern.contains(index);
+    final bool correctTile =
+        _memoryGridPattern
+            .contains(index);
 
     if (!correctTile) {
       _attempts++;
+
       _showResultToast(false);
 
       setState(() {
         _nextQuestion();
       });
+
       return;
     }
 
-    final bool completed = _memoryGridPattern.every(_memoryGridSelected.contains);
-    if (!completed) return;
+    final bool completed =
+        _memoryGridPattern.every(
+      _memoryGridSelected.contains,
+    );
+
+    if (!completed) {
+      return;
+    }
 
     _attempts++;
     _correct++;
     _score++;
+
     _showResultToast(true);
 
     setState(() {
@@ -523,39 +991,77 @@ class _DailyPageState extends State<DailyPage> {
     });
   }
 
-  void _tapAnswer(String selected) {
-    final String currentGame = _games[_gameIndex];
+  void _tapAnswer(
+    String selected,
+  ) {
+    final String currentGame =
+        _games[_gameIndex];
 
-    if (currentGame == GameIds.memoryGrid) {
+    if (currentGame ==
+        GameIds.memoryGrid) {
       return;
     }
 
-    if (currentGame == GameIds.orderRecall) {
+    if (currentGame ==
+        GameIds.orderRecall) {
       if (_orderRecallShowingSequence) {
         setState(() {
-          _orderRecallShowingSequence = false;
-          _instruction = 'Tap the numbers in the same order';
+          _orderRecallShowingSequence =
+              false;
+
+          _instruction =
+              'Tap the numbers in the same order';
+
           _question = '';
+
           _orderRecallInput = '';
-          _orderRecallSelectedSequence = <String>[];
-          _options = List<String>.from(_orderRecallSelectableOptions);
+
+          _orderRecallSelectedSequence =
+              <String>[];
+
+          _options =
+              List<String>.from(
+            _orderRecallSelectableOptions,
+          );
         });
+
         return;
       }
 
-      if (_orderRecallSelectedSequence.contains(selected)) return;
-      if (!_orderRecallSelectableOptions.contains(selected)) return;
+      if (_orderRecallSelectedSequence
+          .contains(selected)) {
+        return;
+      }
+
+      if (!_orderRecallSelectableOptions
+          .contains(selected)) {
+        return;
+      }
 
       setState(() {
-        _orderRecallSelectedSequence.add(selected);
-        _orderRecallInput = _orderRecallSelectedSequence.join('   ');
-        _options = _orderRecallSelectableOptions
-            .where((option) => !_orderRecallSelectedSequence.contains(option))
-            .toList();
+        _orderRecallSelectedSequence
+            .add(selected);
+
+        _orderRecallInput =
+            _orderRecallSelectedSequence
+                .join('   ');
+
+        _options =
+            _orderRecallSelectableOptions
+                .where(
+                  (option) =>
+                      !_orderRecallSelectedSequence
+                          .contains(
+                    option,
+                  ),
+                )
+                .toList();
       });
 
-      if (_orderRecallSelectedSequence.length <
-          _orderRecallAnswerSequence.length) {
+      if (_orderRecallSelectedSequence
+              .length <
+          _orderRecallAnswerSequence
+              .length) {
         return;
       }
 
@@ -563,61 +1069,92 @@ class _DailyPageState extends State<DailyPage> {
 
       bool correct = true;
 
-      _questionResults.add(
-  QuestionResult(
-    gameId: _games[_gameIndex],
-    question: 'Repeat the sequence',
-    userAnswer: _orderRecallSelectedSequence.join(', '),
-    correctAnswer: _orderRecallAnswerSequence.join(', '),
-    isCorrect: correct,
-  ),
-);
-
-      for (int i = 0; i < _orderRecallAnswerSequence.length; i++) {
-        if (_orderRecallSelectedSequence[i] != _orderRecallAnswerSequence[i]) {
+      for (
+        int i = 0;
+        i <
+            _orderRecallAnswerSequence
+                .length;
+        i++
+      ) {
+        if (
+          _orderRecallSelectedSequence[i] !=
+              _orderRecallAnswerSequence[i]
+        ) {
           correct = false;
           break;
         }
       }
+
+      _questionResults.add(
+        QuestionResult(
+          gameId:
+              _games[_gameIndex],
+          question:
+              'Repeat the sequence',
+          userAnswer:
+              _orderRecallSelectedSequence
+                  .join(', '),
+          correctAnswer:
+              _orderRecallAnswerSequence
+                  .join(', '),
+          isCorrect:
+              correct,
+        ),
+      );
 
       if (correct) {
         _correct++;
         _score++;
       }
 
-      _showResultToast(correct);
+      _showResultToast(
+        correct,
+      );
 
-      Future.delayed(const Duration(milliseconds: 450), () {
-        if (!mounted) return;
+      Future.delayed(
+        const Duration(
+          milliseconds: 450,
+        ),
+        () {
+          if (!mounted) return;
 
-        setState(() {
-          _nextQuestion();
-        });
-      });
+          setState(() {
+            _nextQuestion();
+          });
+        },
+      );
 
       return;
     }
 
     _attempts++;
 
-final bool correct = selected == _answer;
+    final bool correct =
+        selected == _answer;
 
-_questionResults.add(
-  QuestionResult(
-    gameId: _games[_gameIndex],
-    question: _question,
-    userAnswer: selected,
-    correctAnswer: _answer,
-    isCorrect: correct,
-  ),
-);
+    _questionResults.add(
+      QuestionResult(
+        gameId:
+            _games[_gameIndex],
+        question:
+            _question,
+        userAnswer:
+            selected,
+        correctAnswer:
+            _answer,
+        isCorrect:
+            correct,
+      ),
+    );
 
-if (correct) {
-  _correct++;
-  _score++;
-}
+    if (correct) {
+      _correct++;
+      _score++;
+    }
 
-    _showResultToast(correct);
+    _showResultToast(
+      correct,
+    );
 
     setState(() {
       _nextQuestion();
@@ -625,196 +1162,670 @@ if (correct) {
   }
 
   Future<void> _finishGame() async {
-  _timer?.cancel();
+    if (_finishingGame) {
+      return;
+    }
 
-  final double elapsedMs =
-      ((secondsPerGame - _timeLeft).clamp(1, secondsPerGame) * 1000.0);
+    _finishingGame = true;
 
-  final double averageResponseTimeMs =
-      max(500.0, elapsedMs / max(1, _attempts));
+    _timer?.cancel();
 
-  _results.add(
-  GameResult(
-    gameId: _games[_gameIndex],
-    score: _score,
-    correct: _correct,
-    attempts: _attempts,
-    averageResponseTimeMs: averageResponseTimeMs,
-    playedAt: DateTime.now(),
-    questionResults: _questionResults
-        .where((result) => result.gameId == _games[_gameIndex])
-        .toList(),
-  ),
-);
+    final double elapsedMs =
+        (
+          (
+            secondsPerGame -
+                _timeLeft
+          ).clamp(
+            1,
+            secondsPerGame,
+          ) *
+              1000.0
+        );
 
-  if (_gameIndex >= _games.length - 1) {
-    await _finishDaily();
-    return;
+    final double averageResponseTimeMs =
+        max(
+      500.0,
+      elapsedMs /
+          max(
+            1,
+            _attempts,
+          ),
+    );
+
+    _results.add(
+      GameResult(
+        gameId:
+            _games[_gameIndex],
+        score:
+            _score,
+        correct:
+            _correct,
+        attempts:
+            _attempts,
+        averageResponseTimeMs:
+            averageResponseTimeMs,
+        playedAt:
+            DateTime.now(),
+        questionResults:
+            _questionResults
+                .where(
+                  (result) =>
+                      result.gameId ==
+                      _games[_gameIndex],
+                )
+                .toList(),
+      ),
+    );
+
+    if (
+      _gameIndex >=
+          _games.length - 1
+    ) {
+      await _finishDaily();
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _gameIndex++;
+    });
+
+    _startGame();
   }
-
-  if (_gameIndex == 2) {
-    await AppInterstitialAd.show(context);
-  }
-
-  if (!mounted) return;
-
-  setState(() {
-    _gameIndex++;
-  });
-
-  _startGame();
-}
 
   Future<void> _finishDaily() async {
-  final double accuracy = _results
-          .map((e) => e.accuracy)
-          .fold<double>(0, (a, b) => a + b) /
-      _results.length;
+    final double accuracy =
+        _results
+                .map(
+                  (e) =>
+                      e.accuracy,
+                )
+                .fold<double>(
+                  0,
+                  (a, b) =>
+                      a + b,
+                ) /
+            _results.length;
 
-  final int totalScore =
-      _results.map((e) => e.score).fold<int>(0, (a, b) => a + b);
+    final int totalScore =
+        _results
+            .map(
+              (e) =>
+                  e.score,
+            )
+            .fold<int>(
+              0,
+              (a, b) =>
+                  a + b,
+            );
 
-  final double averageResponseTime = _results
-          .map((e) => e.averageResponseTimeMs)
-          .fold<double>(0, (a, b) => a + b) /
-      _results.length;
+    final int totalCorrect =
+        _results
+            .map(
+              (e) =>
+                  e.correct,
+            )
+            .fold<int>(
+              0,
+              (a, b) =>
+                  a + b,
+            );
 
-  final prefs = await SharedPreferences.getInstance();
-  final int userAge = prefs.getInt('user_age') ?? 25;
+    final int totalAttempts =
+        _results
+            .map(
+              (e) =>
+                  e.attempts,
+            )
+            .fold<int>(
+              0,
+              (a, b) =>
+                  a + b,
+            );
 
-  final int brainAge = BrainAgeService.calculate(
-    accuracy: accuracy,
-    responseTime: averageResponseTime,
-    score: totalScore,
-    chronologicalAge: userAge,
-  );
+    final double averageResponseTime =
+        _results
+                .map(
+                  (e) =>
+                      e.averageResponseTimeMs,
+                )
+                .fold<double>(
+                  0,
+                  (a, b) =>
+                      a + b,
+                ) /
+            _results.length;
 
-  await StatsService.saveDailySession(
-    DailySessionResult(
-      gameResults: _results,
-      brainAge: brainAge,
-      completedAt: DateTime.now(),
-    ),
-  );
+    final SharedPreferences prefs =
+        await SharedPreferences
+            .getInstance();
 
-  if (!mounted) return;
+    final int userAge =
+        prefs.getInt(
+          'user_age',
+        ) ??
+        25;
 
-  await showDialog<void>(
-    context: context,
-    builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+    final int brainAge =
+        BrainAgeService.calculate(
+      accuracy:
+          accuracy,
+      responseTime:
+          averageResponseTime,
+      score:
+          totalScore,
+      chronologicalAge:
+          userAge,
+    );
+
+    await StatsService
+        .saveDailySession(
+      DailySessionResult(
+        gameResults:
+            _results,
+        brainAge:
+            brainAge,
+        completedAt:
+            DateTime.now(),
       ),
-      title: const Text('Daily Complete'),
-      content: Text('Your Brain Age: $brainAge'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
-        ),
-      ],
-    ),
-  );
+    );
 
-  if (!mounted) return;
-  Navigator.pop(context);
-}
+    if (!mounted) return;
 
-  @override
-  Widget build(BuildContext context) {
-    final double progress =
-        (_gameIndex + ((secondsPerGame - _timeLeft) / secondsPerGame)) /
-            _games.length;
-
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool compact = constraints.maxHeight < 760;
-
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF4B0B8F),
-                  Color(0xFF6413A8),
-                  Color(0xFF7C20C8),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+    await showDialog<void>(
+      context:
+          context,
+      barrierDismissible:
+          false,
+      builder:
+          (dialogContext) {
+        return WillPopScope(
+          onWillPop:
+              () async =>
+                  false,
+          child:
+              AlertDialog(
+            shape:
+                RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(
+                24,
               ),
             ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  const DailySparklesBackground(),
-                  SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      18,
-                      compact ? 10 : 16,
-                      18,
-                      compact ? 14 : 20,
+            title:
+                const Column(
+              children: [
+                Icon(
+                  Icons
+                      .emoji_events_rounded,
+                  color:
+                      Color(
+                    0xFFFFB92E,
+                  ),
+                  size:
+                      42,
+                ),
+                SizedBox(
+                  height:
+                      6,
+                ),
+                Text(
+                  'Daily Complete!',
+                  textAlign:
+                      TextAlign.center,
+                  style:
+                      TextStyle(
+                    fontWeight:
+                        FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            content:
+                Column(
+              mainAxisSize:
+                  MainAxisSize.min,
+              children: [
+                const Text(
+                  'YOUR BRAIN AGE',
+                  style:
+                      TextStyle(
+                    color:
+                        Colors.grey,
+                    fontSize:
+                        12,
+                    fontWeight:
+                        FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(
+                  height:
+                      4,
+                ),
+                Text(
+                  '$brainAge',
+                  style:
+                      const TextStyle(
+                    color:
+                        Color(
+                      0xFF202024,
                     ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight -
-                            MediaQuery.of(context).padding.top -
-                            MediaQuery.of(context).padding.bottom -
-                            30,
-                      ),
-                      child: Column(
+                    fontSize:
+                        54,
+                    fontWeight:
+                        FontWeight.w900,
+                    height:
+                        1,
+                  ),
+                ),
+                const SizedBox(
+                  height:
+                      14,
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.all(
+                    12,
+                  ),
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        const Color(
+                      0xFFF4F2FF,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(
+                      14,
+                    ),
+                  ),
+                  child:
+                      Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
-                          DailyHeader(
-                            onBack: () => Navigator.pop(context),
-                            heartsLeft: _heartsLeft,
-                            onWatchAdForHeart:
-                                _heartsLeft < maxHearts ? _watchAdForHeart : null,
+                          const Text(
+                            'Score',
                           ),
-                          SizedBox(height: compact ? 18 : 24),
-                          DailyStepProgress(
-                            gamesCount: _games.length,
-                            activeIndex: _gameIndex,
-                            progress: progress,
-                          ),
-                          SizedBox(height: compact ? 28 : 38),
-                          DailyQuestionCard(
-                            title: GameIds.label(_games[_gameIndex]),
-                            instruction: _instruction,
-                            question: _question,
-                            questionColor: _questionColor,
-                            timeLeft: _timeLeft,
-                            compact: compact,
-                            inputText: _orderRecallInput,
-                            memoryGridPattern: _memoryGridPattern,
-                            memoryGridSelected: _memoryGridSelected,
-                            memoryGridShowingPattern: _memoryGridShowingPattern,
-                            onMemoryGridTap: _tapMemoryGridTile,
-                          ),
-                          SizedBox(height: compact ? 22 : 30),
-                          ..._options.map((option) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: DailyAnswerButton(
-                                text: option,
-                                onPressed: () => _tapAnswer(option),
+                          Text(
+                            '$totalScore',
+                            style:
+                                const TextStyle(
+                              color:
+                                  Color(
+                                0xFF625BEA,
                               ),
-                            );
-                          }).toList(),
-                          SizedBox(height: compact ? 10 : 18),
-                          DailyBottomStatCard(
-                            icon: '🏆',
-                            label: 'Score',
-                            value: '$_score',
-                          ),
-                          const SizedBox(height: 12),
-                          DailyBottomStatCard(
-                            icon: '✅',
-                            label: 'Correct',
-                            value: '$_correct',
+                              fontWeight:
+                                  FontWeight.w900,
+                            ),
                           ),
                         ],
                       ),
+                      const SizedBox(
+                        height:
+                            8,
+                      ),
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Correct',
+                          ),
+                          Text(
+                            '$totalCorrect / $totalAttempts',
+                            style:
+                                const TextStyle(
+                              color:
+                                  Color(
+                                0xFF625BEA,
+                              ),
+                              fontWeight:
+                                  FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(
+                        height:
+                            8,
+                      ),
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Accuracy',
+                          ),
+                          Text(
+                            '${(accuracy * 100).round()}%',
+                            style:
+                                const TextStyle(
+                              color:
+                                  Color(
+                                0xFF625BEA,
+                              ),
+                              fontWeight:
+                                  FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width:
+                    double.infinity,
+                height:
+                    48,
+                child:
+                    ElevatedButton.icon(
+                  onPressed:
+                      () async {
+                    await AppInterstitialAd
+                        .show(
+                      context,
+                    );
+
+                    if (!mounted) {
+                      return;
+                    }
+
+                    if (
+                      Navigator.of(
+                        dialogContext,
+                      ).canPop()
+                    ) {
+                      Navigator.of(
+                        dialogContext,
+                      ).pop();
+                    }
+
+                    if (!mounted) {
+                      return;
+                    }
+
+                    Navigator.of(
+                      context,
+                    ).pop();
+                  },
+                  icon:
+                      const Icon(
+                    Icons.home_rounded,
+                  ),
+                  label:
+                      const Text(
+                    'Home',
+                    style:
+                        TextStyle(
+                      fontWeight:
+                          FontWeight.w900,
+                    ),
+                  ),
+                  style:
+                      ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color(
+                      0xFF625BEA,
+                    ),
+                    foregroundColor:
+                        Colors.white,
+                    shape:
+                        RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                        14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _answerGrid() {
+    if (_options.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return GridView.builder(
+      shrinkWrap:
+          true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      padding:
+          EdgeInsets.zero,
+      itemCount:
+          _options.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount:
+            2,
+        crossAxisSpacing:
+            8,
+        mainAxisSpacing:
+            8,
+        mainAxisExtent:
+            48,
+      ),
+      itemBuilder:
+          (context, index) {
+        final String option =
+            _options[index];
+
+        return DailyAnswerButton(
+          text:
+              option,
+          onPressed:
+              () =>
+                  _tapAnswer(
+            option,
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    final double progress =
+        (
+          _gameIndex +
+              (
+                (
+                  secondsPerGame -
+                      _timeLeft
+                ) /
+                    secondsPerGame
+              )
+        ) /
+            _games.length;
+
+    return Scaffold(
+      body:
+          LayoutBuilder(
+        builder:
+            (
+              context,
+              constraints,
+            ) {
+          final bool compact =
+              constraints.maxHeight <
+                  760;
+
+          return Container(
+            width:
+                double.infinity,
+            height:
+                double.infinity,
+            decoration:
+                const BoxDecoration(
+              gradient:
+                  LinearGradient(
+                colors: [
+                  Color(
+                    0xFF4B0B8F,
+                  ),
+                  Color(
+                    0xFF6413A8,
+                  ),
+                  Color(
+                    0xFF7C20C8,
+                  ),
+                ],
+                begin:
+                    Alignment.topCenter,
+                end:
+                    Alignment.bottomCenter,
+              ),
+            ),
+            child:
+                SafeArea(
+              child:
+                  Stack(
+                children: [
+                  const DailySparklesBackground(),
+
+                  Padding(
+                    padding:
+                        EdgeInsets.fromLTRB(
+                      12,
+                      compact
+                          ? 6
+                          : 9,
+                      12,
+                      8,
+                    ),
+                    child:
+                        Column(
+                      children: [
+                        DailyHeader(
+                          onBack:
+                              () =>
+                                  Navigator.pop(
+                            context,
+                          ),
+                          heartsLeft:
+                              _heartsLeft,
+                          onWatchAdForHeart:
+                              _heartsLeft <
+                                      maxHearts
+                                  ? _watchAdForHeart
+                                  : null,
+                        ),
+
+                        SizedBox(
+                          height:
+                              compact
+                                  ? 7
+                                  : 9,
+                        ),
+
+                        DailyStepProgress(
+                          gamesCount:
+                              _games.length,
+                          activeIndex:
+                              _gameIndex,
+                          progress:
+                              progress,
+                        ),
+
+                        SizedBox(
+                          height:
+                              compact
+                                  ? 7
+                                  : 10,
+                        ),
+
+                        Flexible(
+                          child:
+                              DailyQuestionCard(
+                            title:
+                                GameIds.label(
+                              _games[
+                                _gameIndex
+                              ],
+                            ),
+                            instruction:
+                                _instruction,
+                            question:
+                                _question,
+                            questionColor:
+                                _questionColor,
+                            timeLeft:
+                                _timeLeft,
+                            compact:
+                                compact,
+                            inputText:
+                                _orderRecallInput,
+                            memoryGridPattern:
+                                _memoryGridPattern,
+                            memoryGridSelected:
+                                _memoryGridSelected,
+                            memoryGridShowingPattern:
+                                _memoryGridShowingPattern,
+                            onMemoryGridTap:
+                                _tapMemoryGridTile,
+                          ),
+                        ),
+
+                        const SizedBox(
+                          height:
+                              8,
+                        ),
+
+                        _answerGrid(),
+
+                        const SizedBox(
+                          height:
+                              7,
+                        ),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child:
+                                  DailyBottomStatCard(
+                                icon:
+                                    '🏆',
+                                label:
+                                    'Score',
+                                value:
+                                    '$_score',
+                              ),
+                            ),
+
+                            const SizedBox(
+                              width:
+                                  8,
+                            ),
+
+                            Expanded(
+                              child:
+                                  DailyBottomStatCard(
+                                icon:
+                                    '✅',
+                                label:
+                                    'Correct',
+                                value:
+                                    '$_correct',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],

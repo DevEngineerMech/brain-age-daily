@@ -9,13 +9,17 @@ class AntonymsPage extends StatefulWidget {
   const AntonymsPage({super.key});
 
   @override
-  State<AntonymsPage> createState() => _AntonymsPageState();
+  State<AntonymsPage> createState() =>
+      _AntonymsPageState();
 }
 
-class _AntonymsPageState extends State<AntonymsPage> {
+class _AntonymsPageState
+    extends State<AntonymsPage> {
   final Random _random = Random();
 
   late AntonymQuestion _question;
+  late List<String> _options;
+
   int score = 0;
   int questionNumber = 1;
 
@@ -28,12 +32,25 @@ class _AntonymsPageState extends State<AntonymsPage> {
   }
 
   void _next() {
-    _question = AntonymQuestions.all[_random.nextInt(AntonymQuestions.all.length)];
-    setState(() {});
+    _question = AntonymQuestions.all[
+      _random.nextInt(
+        AntonymQuestions.all.length,
+      )
+    ];
+
+    _options = List<String>.from(
+      _question.options,
+    )..shuffle(_random);
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _tap(String value) {
-    if (value == _question.answer) score++;
+    if (value == _question.answer) {
+      score++;
+    }
 
     if (questionNumber >= maxQuestions) {
       _showFinishedDialog();
@@ -62,21 +79,34 @@ class _AntonymsPageState extends State<AntonymsPage> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (_) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius:
+                BorderRadius.circular(24),
           ),
-          title: const Text('Round Complete'),
-          content: Text('You scored $score out of $maxQuestions.'),
+          title: const Text(
+            'Round Complete',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: Text(
+            'You scored $score out of $maxQuestions.',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Back'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('Done'),
             ),
             ElevatedButton(
               onPressed: _restart,
-              child: const Text('Play Again'),
+              child: const Text(
+                'Play Again',
+              ),
             ),
           ],
         );
@@ -84,302 +114,482 @@ class _AntonymsPageState extends State<AntonymsPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final List<String> options = List<String>.from(_question.options);
-
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF4B0B8F),
-              Color(0xFF6413A8),
-              Color(0xFF7C20C8),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(18),
-            children: [
-              _Header(
-                title: 'Antonyms',
-                onBack: () => Navigator.pop(context),
+  Widget _header() {
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color:
+                Colors.white.withOpacity(
+              0.10,
+            ),
+            borderRadius:
+                BorderRadius.circular(
+              13,
+            ),
+            child: InkWell(
+              borderRadius:
+                  BorderRadius.circular(
+                13,
               ),
-              const SizedBox(height: 22),
-              _Progress(
-                current: questionNumber,
-                total: maxQuestions,
-              ),
-              const SizedBox(height: 34),
-              _QuestionCard(
-                word: _question.word,
-              ),
-              const SizedBox(height: 28),
-              ...options.map(
-                (option) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _AnswerButton(
-                    text: option,
-                    onPressed: () => _tap(option),
-                  ),
+              onTap: () =>
+                  Navigator.pop(context),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
-              const SizedBox(height: 10),
-              _StatCard(
-                icon: '🏆',
-                label: 'Score',
-                value: '$score',
-              ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Antonyms',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight:
+                    FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _Header extends StatelessWidget {
-  final String title;
-  final VoidCallback onBack;
-
-  const _Header({
-    required this.title,
-    required this.onBack,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _progress() {
     return Row(
-      children: [
-        Material(
-          color: Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onBack,
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
+      children: List.generate(
+        maxQuestions,
+        (index) {
+          final bool active =
+              index + 1 ==
+                  questionNumber;
+
+          final bool done =
+              index + 1 <
+                  questionNumber;
+
+          return Expanded(
+            child: AnimatedContainer(
+              duration:
+                  const Duration(
+                milliseconds: 180,
+              ),
+              height: 7,
+              margin:
+                  const EdgeInsets
+                      .symmetric(
+                horizontal: 2,
+              ),
+              decoration:
+                  BoxDecoration(
+                color: active || done
+                    ? const Color(
+                        0xFFFFD247,
+                      )
+                    : Colors.white
+                        .withOpacity(
+                        0.18,
+                      ),
+                borderRadius:
+                    BorderRadius
+                        .circular(
+                  999,
+                ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
-}
 
-class _Progress extends StatelessWidget {
-  final int current;
-  final int total;
-
-  const _Progress({
-    required this.current,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(total, (index) {
-        final bool active = index + 1 == current;
-        final bool done = index + 1 < current;
-
-        return Expanded(
-          child: Container(
-            height: 10,
-            margin: const EdgeInsets.symmetric(horizontal: 2.5),
-            decoration: BoxDecoration(
-              color: active || done
-                  ? const Color(0xFFFFD247)
-                  : Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _QuestionCard extends StatelessWidget {
-  final String word;
-
-  const _QuestionCard({
-    required this.word,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _questionCard(
+    bool compact,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
-      alignment: Alignment.topCenter,
+      alignment:
+          Alignment.topCenter,
       children: [
         Container(
           width: double.infinity,
-          margin: const EdgeInsets.only(top: 34),
-          padding: const EdgeInsets.fromLTRB(24, 62, 24, 34),
+          height: double.infinity,
+          margin:
+              const EdgeInsets.only(
+            top: 25,
+          ),
+          padding:
+              EdgeInsets.fromLTRB(
+            18,
+            compact ? 38 : 42,
+            18,
+            14,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius:
+                BorderRadius.circular(
+              24,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
+                color: Colors.black
+                    .withOpacity(
+                  0.18,
+                ),
+                blurRadius: 16,
+                offset:
+                    const Offset(
+                  0,
+                  8,
+                ),
               ),
             ],
           ),
           child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment
+                    .center,
             children: [
               const Text(
-                'Choose the opposite word',
-                textAlign: TextAlign.center,
+                'Antonyms',
+                textAlign:
+                    TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF55178A),
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
+                  color:
+                      Color(
+                    0xFF55178A,
+                  ),
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight
+                          .w900,
                 ),
               ),
-              const SizedBox(height: 36),
+
+              const SizedBox(
+                height: 4,
+              ),
+
+              Text(
+                'Choose the opposite word',
+                textAlign:
+                    TextAlign.center,
+                style: TextStyle(
+                  color:
+                      const Color(
+                    0xFF55178A,
+                  ).withOpacity(
+                    0.72,
+                  ),
+                  fontSize: 13,
+                  fontWeight:
+                      FontWeight
+                          .w600,
+                ),
+              ),
+
+              const Spacer(),
+
               FittedBox(
-                fit: BoxFit.scaleDown,
+                fit:
+                    BoxFit.scaleDown,
                 child: Text(
-                  word,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF4C1179),
-                    fontSize: 46,
-                    fontWeight: FontWeight.w900,
+                  _question.word,
+                  textAlign:
+                      TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color:
+                        const Color(
+                      0xFF4C1179,
+                    ),
+                    fontSize:
+                        compact
+                            ? 42
+                            : 50,
+                    fontWeight:
+                        FontWeight
+                            .w900,
                   ),
                 ),
               ),
+
+              const Spacer(),
             ],
           ),
         ),
+
         Container(
-          width: 78,
-          height: 78,
-          decoration: BoxDecoration(
+          width: 56,
+          height: 56,
+          decoration:
+              BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF7B22C9),
+            color:
+                const Color(
+              0xFF7B22C9,
+            ),
             border: Border.all(
               color: Colors.white,
-              width: 5,
+              width: 4,
             ),
           ),
-          child: const Center(
-            child: Text(
-              '⭐',
-              style: TextStyle(fontSize: 34),
+          alignment:
+              Alignment.center,
+          child: const Text(
+            '⭐',
+            style: TextStyle(
+              fontSize: 24,
             ),
           ),
         ),
       ],
     );
   }
-}
 
-class _AnswerButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-
-  const _AnswerButton({
-    required this.text,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _answerButton(
+    String text,
+  ) {
     return SizedBox(
-      width: double.infinity,
-      height: 64,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          elevation: 7,
-          backgroundColor: const Color(0xFFFFD247),
-          foregroundColor: const Color(0xFF35125A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+      height: 48,
+      child:
+          ElevatedButton(
+        onPressed:
+            () => _tap(text),
+        style:
+            ElevatedButton
+                .styleFrom(
+          elevation: 4,
+          backgroundColor:
+              const Color(
+            0xFFFFD247,
+          ),
+          foregroundColor:
+              const Color(
+            0xFF35125A,
+          ),
+          padding:
+              const EdgeInsets
+                  .symmetric(
+            horizontal: 6,
+          ),
+          shape:
+              RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(
+              14,
+            ),
           ),
         ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
+        child: FittedBox(
+          fit:
+              BoxFit.scaleDown,
+          child: Text(
+            text,
+            maxLines: 1,
+            style:
+                const TextStyle(
+              fontSize: 17,
+              fontWeight:
+                  FontWeight.w900,
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _StatCard extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String value;
+  Widget _answerGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: _options.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 48,
+      ),
+      itemBuilder: (_, index) {
+        return _answerButton(
+          _options[index],
+        );
+      },
+    );
+  }
 
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _scoreCard() {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.11),
-        borderRadius: BorderRadius.circular(18),
+      height: 44,
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
+      decoration:
+          BoxDecoration(
+        color:
+            Colors.white.withOpacity(
+          0.11,
+        ),
+        borderRadius:
+            BorderRadius.circular(
+          14,
+        ),
+        border: Border.all(
+          color:
+              Colors.white.withOpacity(
+            0.20,
+          ),
+        ),
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 12),
-          Expanded(
+          const Text(
+            '🏆',
+            style:
+                TextStyle(
+              fontSize: 18,
+            ),
+          ),
+
+          const SizedBox(
+            width: 8,
+          ),
+
+          const Expanded(
             child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
+              'Score',
+              style:
+                  TextStyle(
+                color:
+                    Colors.white,
+                fontSize: 15,
+                fontWeight:
+                    FontWeight
+                        .w900,
               ),
             ),
           ),
+
           Text(
-            value,
-            style: const TextStyle(
+            '$score',
+            style:
+                const TextStyle(
               color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
+              fontSize: 19,
+              fontWeight:
+                  FontWeight.w900,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Scaffold(
+      body:
+          LayoutBuilder(
+        builder:
+            (
+              context,
+              constraints,
+            ) {
+          final bool compact =
+              constraints.maxHeight <
+                  760;
+
+          return Container(
+            width:
+                double.infinity,
+            height:
+                double.infinity,
+            decoration:
+                const BoxDecoration(
+              gradient:
+                  LinearGradient(
+                colors: [
+                  Color(
+                    0xFF4B0B8F,
+                  ),
+                  Color(
+                    0xFF6413A8,
+                  ),
+                  Color(
+                    0xFF7C20C8,
+                  ),
+                ],
+                begin:
+                    Alignment
+                        .topCenter,
+                end:
+                    Alignment
+                        .bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets
+                        .fromLTRB(
+                  12,
+                  8,
+                  12,
+                  8,
+                ),
+                child: Column(
+                  children: [
+                    _header(),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    _progress(),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    Expanded(
+                      child:
+                          _questionCard(
+                        compact,
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    _answerGrid(),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    _scoreCard(),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

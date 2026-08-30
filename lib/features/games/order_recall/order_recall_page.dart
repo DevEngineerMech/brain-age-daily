@@ -7,17 +7,20 @@ class OrderRecallPage extends StatefulWidget {
   const OrderRecallPage({super.key});
 
   @override
-  State<OrderRecallPage> createState() => _OrderRecallPageState();
+  State<OrderRecallPage> createState() =>
+      _OrderRecallPageState();
 }
 
-class _OrderRecallPageState extends State<OrderRecallPage> {
+class _OrderRecallPageState
+    extends State<OrderRecallPage> {
   final Random _random = Random();
 
   late OrderRecallQuestion _question;
 
   int score = 0;
   int questionNumber = 1;
-  final int maxQuestions = 10;
+
+  static const int maxQuestions = 10;
 
   bool showingNumbers = true;
 
@@ -27,23 +30,37 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
   @override
   void initState() {
     super.initState();
-    _loadQuestion(resetGame: true);
+    _loadQuestion(
+      resetGame: true,
+    );
   }
 
-  void _loadQuestion({bool resetGame = false}) {
+  void _loadQuestion({
+    bool resetGame = false,
+  }) {
     if (resetGame) {
       score = 0;
       questionNumber = 1;
     }
 
-    _question = OrderRecallQuestions
-        .all[_random.nextInt(OrderRecallQuestions.all.length)];
+    _question =
+        OrderRecallQuestions.all[
+          _random.nextInt(
+            OrderRecallQuestions.all.length,
+          )
+        ];
 
     showingNumbers = true;
     answerInput = <int>[];
-    selectableNumbers = List<int>.from(_question.shown)..shuffle(_random);
 
-    setState(() {});
+    selectableNumbers =
+        List<int>.from(
+      _question.shown,
+    )..shuffle(_random);
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _goToAnswerScreen() {
@@ -58,13 +75,18 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
   void _selectNumber(int number) {
     if (showingNumbers) return;
     if (answerInput.contains(number)) return;
-    if (answerInput.length >= _question.answer.length) return;
+
+    if (answerInput.length >=
+        _question.answer.length) {
+      return;
+    }
 
     setState(() {
       answerInput.add(number);
     });
 
-    if (answerInput.length == _question.answer.length) {
+    if (answerInput.length ==
+        _question.answer.length) {
       _checkAnswer();
     }
   }
@@ -89,8 +111,13 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
   void _checkAnswer() {
     bool correct = true;
 
-    for (int i = 0; i < _question.answer.length; i++) {
-      if (answerInput[i] != _question.answer[i]) {
+    for (
+      int i = 0;
+      i < _question.answer.length;
+      i++
+    ) {
+      if (answerInput[i] !=
+          _question.answer[i]) {
         correct = false;
         break;
       }
@@ -104,49 +131,71 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(correct ? '✅ Correct' : '❌ Wrong'),
-          duration: const Duration(milliseconds: 550),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor:
-              correct ? const Color(0xFF26B957) : const Color(0xFFE94D5F),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          content: Text(
+            correct
+                ? '✅ Correct'
+                : '❌ Wrong',
           ),
-          margin: const EdgeInsets.all(16),
+          duration: const Duration(
+            milliseconds: 450,
+          ),
+          behavior:
+              SnackBarBehavior.floating,
+          backgroundColor: correct
+              ? const Color(0xFF26B957)
+              : const Color(0xFFE94D5F),
         ),
       );
 
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
+    Future.delayed(
+      const Duration(
+        milliseconds: 600,
+      ),
+      () {
+        if (!mounted) return;
 
-      if (questionNumber >= maxQuestions) {
-        _showFinishedDialog();
-      } else {
-        questionNumber++;
-        _loadQuestion();
-      }
-    });
+        if (questionNumber >=
+            maxQuestions) {
+          _showFinishedDialog();
+        } else {
+          setState(() {
+            questionNumber++;
+          });
+
+          _loadQuestion();
+        }
+      },
+    );
   }
 
-  Future<void> _showFinishedDialog() async {
-    await showDialog<void>(
+  void _restart() {
+    Navigator.pop(context);
+
+    _loadQuestion(
+      resetGame: true,
+    );
+  }
+
+  void _showFinishedDialog() {
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius:
+                BorderRadius.circular(24),
           ),
-          title: const Text('Order Recall Complete'),
-          content: Text('Score: $score / $maxQuestions'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _loadQuestion(resetGame: true);
-              },
-              child: const Text('Play Again'),
+          title: const Text(
+            'Round Complete',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
             ),
+          ),
+          content: Text(
+            'You scored $score out of $maxQuestions.',
+          ),
+          actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -154,131 +203,258 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
               },
               child: const Text('Done'),
             ),
+            ElevatedButton(
+              onPressed: _restart,
+              child:
+                  const Text('Play Again'),
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _progressBar() {
-    return Row(
-      children: List<Widget>.generate(maxQuestions, (index) {
-        final bool active = index < questionNumber;
-
-        return Expanded(
-          child: Container(
-            height: 12,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(0xFFFFD247)
-                  : Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _numberOption(int number) {
-    final bool used = answerInput.contains(number);
-
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        child: SizedBox(
-          height: 62,
-          child: ElevatedButton(
-            onPressed: used ? null : () => _selectNumber(number),
-            style: ElevatedButton.styleFrom(
-              elevation: used ? 0 : 7,
-              backgroundColor: used
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : const Color(0xFFFFD247),
-              foregroundColor: const Color(0xFF35125A),
-              disabledBackgroundColor: Colors.white.withValues(alpha: 0.35),
-              disabledForegroundColor:
-                  const Color(0xFF35125A).withValues(alpha: 0.35),
-              shadowColor: const Color(0xFFFFC93A).withValues(alpha: 0.45),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-                side: const BorderSide(
-                  color: Color(0xFFFFF0A6),
-                  width: 1.4,
+  Widget _header() {
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color:
+                Colors.white.withOpacity(0.10),
+            borderRadius:
+                BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius:
+                  BorderRadius.circular(13),
+              onTap: () =>
+                  Navigator.pop(context),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
             ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
             child: Text(
-              '$number',
-              style: const TextStyle(
+              'Order Recall',
+              style: TextStyle(
+                color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _actionButton({
-    required String text,
-    required VoidCallback onPressed,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        child: SizedBox(
-          height: 54,
-          child: ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: Colors.white.withValues(alpha: 0.11),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.22),
+  Widget _progress() {
+    return Row(
+      children: List.generate(
+        maxQuestions,
+        (index) {
+          final bool active =
+              index + 1 == questionNumber;
+
+          final bool done =
+              index + 1 < questionNumber;
+
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 180,
+              ),
+              height: 7,
+              margin:
+                  const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              decoration: BoxDecoration(
+                color: active || done
+                    ? const Color(0xFFFFD247)
+                    : Colors.white
+                        .withOpacity(0.18),
+                borderRadius:
+                    BorderRadius.circular(999),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _questionCard(
+    bool compact,
+  ) {
+    final String displayText =
+        showingNumbers
+            ? _question.shown
+                .join('   ')
+            : answerInput.isEmpty
+                ? '_   _   _   _   _'
+                : answerInput
+                    .map(
+                      (number) =>
+                          '$number',
+                    )
+                    .join('   ');
+
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          width: double.infinity,
+          height: double.infinity,
+          margin:
+              const EdgeInsets.only(top: 25),
+          padding: EdgeInsets.fromLTRB(
+            18,
+            compact ? 38 : 42,
+            18,
+            14,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    Colors.black.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Order Recall',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF55178A),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
+              const SizedBox(height: 4),
+
+              Text(
+                showingNumbers
+                    ? 'Remember the numbers in order'
+                    : 'Tap them in the same order',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF55178A)
+                      .withOpacity(0.72),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+
+              const Spacer(),
+
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 18,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius:
+                      BorderRadius.circular(16),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    displayText,
+                    maxLines: 1,
+                    textAlign:
+                        TextAlign.center,
+                    style: TextStyle(
+                      color:
+                          const Color(0xFF4C1179),
+                      fontSize:
+                          compact ? 30 : 36,
+                      fontWeight:
+                          FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+            ],
           ),
         ),
-      ),
+
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF7B22C9),
+            border: Border.all(
+              color: Colors.white,
+              width: 4,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '⭐',
+            style: TextStyle(fontSize: 24),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _nextButton() {
+  Widget _numberButton(
+    int number,
+  ) {
+    final bool used =
+        answerInput.contains(number);
+
     return SizedBox(
-      width: double.infinity,
-      height: 64,
+      height: 48,
       child: ElevatedButton(
-        onPressed: _goToAnswerScreen,
+        onPressed: used
+            ? null
+            : () =>
+                _selectNumber(number),
         style: ElevatedButton.styleFrom(
-          elevation: 7,
-          shadowColor: const Color(0xFFFFC93A).withValues(alpha: 0.45),
-          backgroundColor: const Color(0xFFFFD247),
-          foregroundColor: const Color(0xFF35125A),
+          elevation: used ? 0 : 4,
+          backgroundColor: used
+              ? Colors.white
+                  .withOpacity(0.30)
+              : const Color(0xFFFFD247),
+          disabledBackgroundColor:
+              Colors.white.withOpacity(0.30),
+          foregroundColor:
+              const Color(0xFF35125A),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-            side: const BorderSide(
-              color: Color(0xFFFFF0A6),
-              width: 1.4,
-            ),
+            borderRadius:
+                BorderRadius.circular(14),
           ),
         ),
-        child: const Text(
-          'NEXT',
-          style: TextStyle(
-            fontSize: 22,
+        child: Text(
+          '$number',
+          style: const TextStyle(
+            fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -286,140 +462,114 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
     );
   }
 
-  Widget _topHeader() {
-    return Row(
-      children: [
-        Material(
-          color: Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => Navigator.pop(context),
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Order Recall',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
-            ),
-          ),
-        ),
-      ],
+  Widget _numberGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount:
+          selectableNumbers.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 48,
+      ),
+      itemBuilder: (
+        _,
+        index,
+      ) {
+        return _numberButton(
+          selectableNumbers[index],
+        );
+      },
     );
   }
 
-  Widget _questionCard(String displayText) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.topCenter,
-      children: [
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 34),
-          padding: const EdgeInsets.fromLTRB(24, 62, 24, 34),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Question $questionNumber of $maxQuestions',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF55178A),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                showingNumbers
-                    ? 'Remember the numbers in order'
-                    : 'Tap the numbers in the same order',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: const Color(0xFF55178A).withValues(alpha: 0.76),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 34),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 22,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: const Color(0xFF7B22C9).withValues(alpha: 0.18),
-                  ),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    displayText,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: Color(0xFF4C1179),
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  Widget _nextButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed:
+            _goToAnswerScreen,
+        style: ElevatedButton.styleFrom(
+          elevation: 4,
+          backgroundColor:
+              const Color(0xFFFFD247),
+          foregroundColor:
+              const Color(0xFF35125A),
+          shape: RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(14),
           ),
         ),
-        Container(
-          width: 78,
-          height: 78,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF7B22C9),
-            border: Border.all(
-              color: Colors.white,
-              width: 5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+        child: const Text(
+          'NEXT',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
           ),
-          child: const Center(
-            child: Text(
-              '⭐',
-              style: TextStyle(fontSize: 34),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 42,
+            child: OutlinedButton(
+              onPressed: _undo,
+              style:
+                  OutlinedButton.styleFrom(
+                foregroundColor:
+                    Colors.white,
+                side: BorderSide(
+                  color:
+                      Colors.white.withOpacity(
+                    0.30,
+                  ),
+                ),
+              ),
+              child: const Text(
+                'UNDO',
+                style: TextStyle(
+                  fontWeight:
+                      FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SizedBox(
+            height: 42,
+            child: OutlinedButton(
+              onPressed: _clear,
+              style:
+                  OutlinedButton.styleFrom(
+                foregroundColor:
+                    Colors.white,
+                side: BorderSide(
+                  color:
+                      Colors.white.withOpacity(
+                    0.30,
+                  ),
+                ),
+              ),
+              child: const Text(
+                'CLEAR',
+                style: TextStyle(
+                  fontWeight:
+                      FontWeight.w900,
+                ),
+              ),
             ),
           ),
         ),
@@ -429,28 +579,34 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
 
   Widget _scoreCard() {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 44,
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.11),
-        borderRadius: BorderRadius.circular(18),
+        color:
+            Colors.white.withOpacity(0.11),
+        borderRadius:
+            BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.22),
+          color:
+              Colors.white.withOpacity(0.20),
         ),
       ),
       child: Row(
         children: [
           const Text(
             '🏆',
-            style: TextStyle(fontSize: 24),
+            style: TextStyle(fontSize: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Score',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 19,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -459,7 +615,7 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
             '$score',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 25,
+              fontSize: 19,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -470,85 +626,70 @@ class _OrderRecallPageState extends State<OrderRecallPage> {
 
   @override
   Widget build(BuildContext context) {
-    final String displayText = showingNumbers
-        ? _question.shown.join('   ')
-        : answerInput.isEmpty
-            ? '_   _   _   _   _'
-            : answerInput.map((number) => '$number').join('   ');
-
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF4B0B8F),
-              Color(0xFF6413A8),
-              Color(0xFF7C20C8),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final bool compact = constraints.maxHeight < 760;
+      body: LayoutBuilder(
+        builder: (
+          context,
+          constraints,
+        ) {
+          final bool compact =
+              constraints.maxHeight < 760;
 
-              return SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  compact ? 10 : 16,
-                  18,
-                  20,
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration:
+                const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF4B0B8F),
+                  Color(0xFF6413A8),
+                  Color(0xFF7C20C8),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  8,
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight -
-                        MediaQuery.of(context).padding.top -
-                        MediaQuery.of(context).padding.bottom -
-                        30,
-                  ),
-                  child: Column(
-                    children: [
-                      _topHeader(),
-                      SizedBox(height: compact ? 18 : 24),
-                      _progressBar(),
-                      SizedBox(height: compact ? 28 : 38),
-                      _questionCard(displayText),
-                      SizedBox(height: compact ? 22 : 30),
-                      if (showingNumbers)
-                        _nextButton()
-                      else ...[
-                        Row(
-                          children: selectableNumbers
-                              .map((number) => _numberOption(number))
-                              .toList(),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            _actionButton(
-                              text: 'UNDO',
-                              onPressed: _undo,
-                            ),
-                            _actionButton(
-                              text: 'CLEAR',
-                              onPressed: _clear,
-                            ),
-                          ],
-                        ),
-                      ],
-                      SizedBox(height: compact ? 24 : 34),
-                      _scoreCard(),
+                child: Column(
+                  children: [
+                    _header(),
+                    const SizedBox(height: 8),
+                    _progress(),
+                    const SizedBox(height: 8),
+
+                    Expanded(
+                      child: _questionCard(
+                        compact,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    if (showingNumbers)
+                      _nextButton()
+                    else ...[
+                      _numberGrid(),
+                      const SizedBox(height: 8),
+                      _actionButtons(),
                     ],
-                  ),
+
+                    const SizedBox(height: 8),
+                    _scoreCard(),
+                  ],
                 ),
-              );
-            },
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

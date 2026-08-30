@@ -18,80 +18,87 @@ class DailyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool canWatchAd = onWatchAdForHeart != null;
 
-    return Row(
-      children: [
-        Material(
-          color: Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onBack,
-            child: const SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Daily Brain Check',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
-            ),
-          ),
-        ),
-        Material(
-          color: Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: canWatchAd ? onWatchAdForHeart : null,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.18),
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(13),
+              onTap: onBack,
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
-              child: Row(
-                children: [
-                  const Text(
-                    '❤️',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$heartsLeft',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if (canWatchAd) ...[
-                    const SizedBox(width: 7),
-                    const Icon(
-                      Icons.play_circle_fill_rounded,
-                      color: Color(0xFFFFD247),
-                      size: 21,
-                    ),
-                  ],
-                ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Daily Brain Check',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
               ),
             ),
           ),
-        ),
-      ],
+          Material(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(15),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(15),
+              onTap: canWatchAd ? onWatchAdForHeart : null,
+              child: Container(
+                height: 42,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '❤️',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '$heartsLeft',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (canWatchAd) ...[
+                      const SizedBox(width: 5),
+                      const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Color(0xFFFFD247),
+                        size: 18,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -113,57 +120,55 @@ class DailyStepProgress extends StatelessWidget {
     return Column(
       children: [
         Row(
-          children: List<Widget>.generate(gamesCount, (index) {
-            final bool active = index == activeIndex;
-            final bool done = index < activeIndex;
+          children: List<Widget>.generate(
+            gamesCount,
+            (index) {
+              final bool active = index == activeIndex;
+              final bool done = index < activeIndex;
 
-            return Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 46,
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: active
-                      ? const Color(0xFFFFD247)
-                      : done
-                          ? const Color(0xFFFFB92E)
-                          : Colors.white.withOpacity(0.16),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 34,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 3,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
                     color: active
-                        ? const Color(0xFFFFF0A6)
-                        : Colors.white.withOpacity(0.10),
-                    width: 1.4,
+                        ? const Color(0xFFFFD247)
+                        : done
+                            ? const Color(0xFFFFB92E)
+                            : Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: active
+                          ? const Color(0xFFFFF0A6)
+                          : Colors.white.withOpacity(0.10),
+                      width: 1.2,
+                    ),
                   ),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFFFFD247).withOpacity(0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: active ? const Color(0xFF37135A) : Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: active
+                          ? const Color(0xFF37135A)
+                          : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 7),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
-            minHeight: 8,
+            minHeight: 5,
             backgroundColor: Colors.white.withOpacity(0.18),
             valueColor: const AlwaysStoppedAnimation<Color>(
               Color(0xFFFFD247),
@@ -205,7 +210,8 @@ class DailyQuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isFocusCount = title.toLowerCase().contains('focus count');
+    final bool isFocusCount =
+        title.toLowerCase().contains('focus count');
 
     return Stack(
       clipBehavior: Clip.none,
@@ -213,24 +219,21 @@ class DailyQuestionCard extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          constraints: BoxConstraints(
-            minHeight: compact ? 320 : 390,
-          ),
-          margin: const EdgeInsets.only(top: 34),
-          padding: EdgeInsets.fromLTRB(
-            24,
-            compact ? 52 : 62,
-            24,
-            compact ? 28 : 34,
+          margin: const EdgeInsets.only(top: 25),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            36,
+            16,
+            14,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -240,29 +243,34 @@ class DailyQuestionCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Color(0xFF55178A),
-                  fontSize: 25,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 3),
               Text(
                 instruction,
                 textAlign: TextAlign.center,
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: const Color(0xFF55178A).withOpacity(0.76),
-                  fontSize: 16,
+                  color: const Color(0xFF55178A)
+                      .withOpacity(0.76),
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  height: 1.25,
+                  height: 1.15,
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 7),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
@@ -271,13 +279,6 @@ class DailyQuestionCard extends StatelessWidget {
                     ],
                   ),
                   borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF8C31E8).withOpacity(0.25),
-                      blurRadius: 14,
-                      offset: const Offset(0, 7),
-                    ),
-                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -285,21 +286,22 @@ class DailyQuestionCard extends StatelessWidget {
                     const Icon(
                       Icons.timer_rounded,
                       color: Colors.white,
-                      size: 20,
+                      size: 16,
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 4),
                     Text(
                       '${timeLeft}s',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 17,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: compact ? 24 : 34),
+              const SizedBox(height: 10),
+
               if (memoryGridPattern.isNotEmpty)
                 DailyMemoryGridBoard(
                   pattern: memoryGridPattern,
@@ -308,86 +310,99 @@ class DailyQuestionCard extends StatelessWidget {
                   onTap: onMemoryGridTap,
                 )
               else if (question.isNotEmpty && isFocusCount)
-                DailyFocusCountGrid(question: question)
+                DailyFocusCountGrid(
+                  question: question,
+                )
               else if (question.isNotEmpty)
                 Container(
                   width: double.infinity,
+                  constraints: const BoxConstraints(
+                    minHeight: 65,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 18,
+                    horizontal: 12,
+                    vertical: 11,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFF7B22C9).withOpacity(0.18),
+                      color: const Color(0xFF7B22C9)
+                          .withOpacity(0.18),
                     ),
                   ),
-                  child: Text(
-                    question,
-                    textAlign: TextAlign.center,
-                    softWrap: true,
-                    style: TextStyle(
-                      color: questionColor ?? const Color(0xFF4C1179),
-                      fontSize: compact ? 24 : 28,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                      letterSpacing: -0.3,
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      question,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: questionColor ??
+                            const Color(0xFF4C1179),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                      ),
                     ),
                   ),
                 )
               else
                 Container(
                   width: double.infinity,
+                  constraints: const BoxConstraints(
+                    minHeight: 62,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 18,
+                    horizontal: 12,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF7B22C9).withOpacity(0.18),
-                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    inputText.isEmpty
-                        ? '_  _  _  _  _'
-                        : inputText.split('').join('   '),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF4C1179),
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      inputText.isEmpty
+                          ? '_  _  _  _  _'
+                          : inputText.split('').join('   '),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF4C1179),
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
         ),
+
         Container(
-          width: 78,
-          height: 78,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF7B22C9),
             border: Border.all(
               color: Colors.white,
-              width: 5,
+              width: 4,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
           child: const Center(
             child: Text(
               '⭐',
-              style: TextStyle(fontSize: 34),
+              style: TextStyle(fontSize: 24),
             ),
           ),
         ),
@@ -408,45 +423,43 @@ class DailyFocusCountGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> symbols = question
         .split(RegExp(r'\s+'))
-        .where((item) => item.trim().isNotEmpty)
+        .where(
+          (item) => item.trim().isNotEmpty,
+        )
         .toList();
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: const Color(0xFFF3E8FF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF7B22C9).withOpacity(0.18),
-        ),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Wrap(
         alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: symbols.map((symbol) {
-          return Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF7B22C9).withOpacity(0.12),
+        spacing: 5,
+        runSpacing: 5,
+        children: symbols.map(
+          (symbol) {
+            return Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
               ),
-            ),
-            child: Text(
-              symbol,
-              style: const TextStyle(
-                color: Color(0xFF4C1179),
-                fontSize: 23,
-                fontWeight: FontWeight.w900,
+              child: Text(
+                symbol,
+                style: const TextStyle(
+                  color: Color(0xFF4C1179),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          },
+        ).toList(),
       ),
     );
   }
@@ -468,36 +481,51 @@ class DailyMemoryGridBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double availableHeight =
+        MediaQuery.of(context).size.height;
+
+    final double boardSize =
+        availableHeight < 760 ? 180 : 205;
+
     return SizedBox(
-      width: 260,
-      height: 260,
+      width: boardSize,
+      height: boardSize,
       child: GridView.builder(
         padding: EdgeInsets.zero,
-        physics: const NeverScrollableScrollPhysics(),
+        physics:
+            const NeverScrollableScrollPhysics(),
         itemCount: 16,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
+          mainAxisSpacing: 5,
+          crossAxisSpacing: 5,
         ),
         itemBuilder: (_, index) {
-          final bool lit = showingPattern && pattern.contains(index);
-          final bool picked = selected.contains(index);
+          final bool lit =
+              showingPattern &&
+                  pattern.contains(index);
+
+          final bool picked =
+              selected.contains(index);
 
           return GestureDetector(
             onTap: () => onTap?.call(index),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
+              duration:
+                  const Duration(milliseconds: 140),
               decoration: BoxDecoration(
                 color: lit
                     ? const Color(0xFFFFD247)
                     : picked
                         ? const Color(0xFF26B957)
                         : const Color(0xFFF3E8FF),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius:
+                    BorderRadius.circular(10),
                 border: Border.all(
-                  color: const Color(0xFF7B22C9).withOpacity(0.22),
-                  width: 1.4,
+                  color: const Color(0xFF7B22C9)
+                      .withOpacity(0.22),
+                  width: 1.2,
                 ),
               ),
             ),
@@ -521,20 +549,27 @@ class DailyAnswerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
-      height: 64,
+      height: 48,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          elevation: 7,
-          shadowColor: const Color(0xFFFFC93A).withOpacity(0.45),
-          backgroundColor: const Color(0xFFFFD247),
-          foregroundColor: const Color(0xFF35125A),
+          elevation: 4,
+          shadowColor:
+              const Color(0xFFFFC93A)
+                  .withOpacity(0.35),
+          backgroundColor:
+              const Color(0xFFFFD247),
+          foregroundColor:
+              const Color(0xFF35125A),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius:
+                BorderRadius.circular(14),
             side: const BorderSide(
               color: Color(0xFFFFF0A6),
-              width: 1.4,
+              width: 1.2,
             ),
           ),
         ),
@@ -544,7 +579,7 @@ class DailyAnswerButton extends StatelessWidget {
             text,
             maxLines: 1,
             style: const TextStyle(
-              fontSize: 22,
+              fontSize: 17,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -569,11 +604,13 @@ class DailyBottomStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 42,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.11),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(
           color: Colors.white.withOpacity(0.22),
         ),
@@ -582,15 +619,17 @@ class DailyBottomStatCard extends StatelessWidget {
         children: [
           Text(
             icon,
-            style: const TextStyle(fontSize: 24),
+            style: const TextStyle(
+              fontSize: 18,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 19,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -599,7 +638,7 @@ class DailyBottomStatCard extends StatelessWidget {
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 25,
+              fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -622,27 +661,26 @@ class DailySparklesBackground extends StatelessWidget {
           Positioned(
             top: 120,
             left: 20,
-            child: DailySparkle(size: 8, opacity: 0.28),
+            child: DailySparkle(
+              size: 8,
+              opacity: 0.28,
+            ),
           ),
           Positioned(
             top: 210,
             right: 32,
-            child: DailySparkle(size: 7, opacity: 0.30),
-          ),
-          Positioned(
-            top: 470,
-            left: 46,
-            child: DailySparkle(size: 6, opacity: 0.30),
+            child: DailySparkle(
+              size: 7,
+              opacity: 0.30,
+            ),
           ),
           Positioned(
             bottom: 180,
             right: 26,
-            child: DailySparkle(size: 8, opacity: 0.28),
-          ),
-          Positioned(
-            bottom: 72,
-            left: 28,
-            child: DailySparkle(size: 6, opacity: 0.22),
+            child: DailySparkle(
+              size: 8,
+              opacity: 0.28,
+            ),
           ),
         ],
       ),
@@ -668,8 +706,10 @@ class DailySparkle extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(opacity),
-          borderRadius: BorderRadius.circular(2),
+          color:
+              Colors.white.withOpacity(opacity),
+          borderRadius:
+              BorderRadius.circular(2),
         ),
       ),
     );
