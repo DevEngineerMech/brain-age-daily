@@ -37,16 +37,14 @@ class DailyPage extends StatefulWidget {
   const DailyPage({super.key});
 
   @override
-  State<DailyPage> createState() =>
-      _DailyPageState();
+  State<DailyPage> createState() => _DailyPageState();
 }
 
 class _DailyPageState extends State<DailyPage> {
   static const int secondsPerGame = 25;
   static const int maxHearts = 3;
 
-  static const String _heartsKey =
-      'daily_hearts';
+  static const String _heartsKey = 'daily_hearts';
 
   static const String _lastHeartRegenKey =
       'daily_last_heart_regen_ms';
@@ -56,8 +54,7 @@ class _DailyPageState extends State<DailyPage> {
 
   late final List<String> _games;
 
-  final List<GameResult> _results =
-      <GameResult>[];
+  final List<GameResult> _results = <GameResult>[];
 
   final List<QuestionResult> _questionResults =
       <QuestionResult>[];
@@ -81,22 +78,17 @@ class _DailyPageState extends State<DailyPage> {
   bool _orderRecallShowingSequence = false;
   String _orderRecallInput = '';
 
-  List<String> _orderRecallAnswerSequence =
-      <String>[];
+  List<String> _orderRecallAnswerSequence = <String>[];
 
-  List<String> _orderRecallSelectedSequence =
-      <String>[];
+  List<String> _orderRecallSelectedSequence = <String>[];
 
-  List<String> _orderRecallSelectableOptions =
-      <String>[];
+  List<String> _orderRecallSelectableOptions = <String>[];
 
   bool _memoryGridShowingPattern = false;
 
-  List<int> _memoryGridPattern =
-      <int>[];
+  List<int> _memoryGridPattern = <int>[];
 
-  final Set<int> _memoryGridSelected =
-      <int>{};
+  final Set<int> _memoryGridSelected = <int>{};
 
   bool _finishingGame = false;
 
@@ -108,7 +100,9 @@ class _DailyPageState extends State<DailyPage> {
 
     AdMobService.initialize();
 
+    // Preload the interstitial for after game 3.
     AppInterstitialAd.load();
+
     AppRewardedAd.load();
 
     _loadHearts();
@@ -136,8 +130,7 @@ class _DailyPageState extends State<DailyPage> {
         await SharedPreferences.getInstance();
 
     int hearts =
-        prefs.getInt(_heartsKey) ??
-            maxHearts;
+        prefs.getInt(_heartsKey) ?? maxHearts;
 
     final int nowMs =
         DateTime.now().millisecondsSinceEpoch;
@@ -232,8 +225,7 @@ class _DailyPageState extends State<DailyPage> {
     if (safeHearts < maxHearts) {
       await prefs.setInt(
         _lastHeartRegenKey,
-        DateTime.now()
-            .millisecondsSinceEpoch,
+        DateTime.now().millisecondsSinceEpoch,
       );
     }
 
@@ -332,19 +324,15 @@ class _DailyPageState extends State<DailyPage> {
     _orderRecallShowingSequence = false;
     _orderRecallInput = '';
 
-    _orderRecallAnswerSequence =
-        <String>[];
+    _orderRecallAnswerSequence = <String>[];
 
-    _orderRecallSelectedSequence =
-        <String>[];
+    _orderRecallSelectedSequence = <String>[];
 
-    _orderRecallSelectableOptions =
-        <String>[];
+    _orderRecallSelectableOptions = <String>[];
 
     _memoryGridShowingPattern = false;
 
-    _memoryGridPattern =
-        <int>[];
+    _memoryGridPattern = <int>[];
 
     _memoryGridSelected.clear();
   }
@@ -387,8 +375,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.timeDifference) {
+    if (game == GameIds.timeDifference) {
       final TimeDifferenceQuestion q =
           TimeDifferenceQuestions.all[
             _random.nextInt(
@@ -414,8 +401,7 @@ class _DailyPageState extends State<DailyPage> {
       ]
           .where(
             (e) =>
-                int.tryParse(e) !=
-                    null &&
+                int.tryParse(e) != null &&
                 int.parse(e) >= 0,
           )
           .toSet()
@@ -454,8 +440,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.scienceQuiz) {
+    if (game == GameIds.scienceQuiz) {
       final ScienceQuizQuestion q =
           ScienceQuizQuestions.all[
             _random.nextInt(
@@ -479,8 +464,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.biologyQuiz) {
+    if (game == GameIds.biologyQuiz) {
       final BiologyQuizQuestion q =
           BiologyQuizQuestions.all[
             _random.nextInt(
@@ -504,8 +488,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.wordSnap) {
+    if (game == GameIds.wordSnap) {
       final WordSnapQuestion q =
           WordSnapQuestions.all[
             _random.nextInt(
@@ -529,8 +512,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.wordScramble) {
+    if (game == GameIds.wordScramble) {
       final WordScrambleQuestion q =
           WordScrambleQuestions.all[
             _random.nextInt(
@@ -554,8 +536,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.focusCount) {
+    if (game == GameIds.focusCount) {
       final FocusCountQuestion q =
           FocusCountQuestions.random(
         _random,
@@ -584,8 +565,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.stroopShift) {
+    if (game == GameIds.stroopShift) {
       final StroopShiftQuestion q =
           StroopShiftQuestions.all[
             _random.nextInt(
@@ -614,8 +594,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.reactionSwitch) {
+    if (game == GameIds.reactionSwitch) {
       final ReactionSwitchQuestion q =
           ReactionSwitchQuestions.all[
             _random.nextInt(
@@ -660,8 +639,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.symbolMatch) {
+    if (game == GameIds.symbolMatch) {
       final SymbolMatchQuestion q =
           SymbolMatchQuestions.all[
             _random.nextInt(
@@ -685,8 +663,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.patternLogic) {
+    if (game == GameIds.patternLogic) {
       final PatternLogicQuestion q =
           PatternLogicQuestion.generate();
 
@@ -705,8 +682,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.memoryGrid) {
+    if (game == GameIds.memoryGrid) {
       final MemoryGridQuestion q =
           MemoryGridQuestions.all[
             _random.nextInt(
@@ -759,8 +735,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (game ==
-        GameIds.orderRecall) {
+    if (game == GameIds.orderRecall) {
       final OrderRecallQuestion q =
           OrderRecallQuestions.all[
             _random.nextInt(
@@ -812,8 +787,7 @@ class _DailyPageState extends State<DailyPage> {
     _instruction = 'Ready?';
     _question = 'Ready?';
 
-    _options =
-        <String>['OK'];
+    _options = <String>['OK'];
 
     _answer = 'OK';
   }
@@ -1146,6 +1120,33 @@ class _DailyPageState extends State<DailyPage> {
       ),
     );
 
+    /*
+     * GAME 3 HAS JUST FINISHED.
+     *
+     * _gameIndex starts at 0, so:
+     *
+     * 0 = game 1
+     * 1 = game 2
+     * 2 = game 3
+     *
+     * Show an interstitial before game 4.
+     */
+    if (_gameIndex == 2) {
+      await AppInterstitialAd.show(
+        context,
+      );
+
+      if (!mounted) return;
+
+      /*
+       * The game-3 ad has now been used.
+       * Preload another interstitial so it
+       * is ready when the user finishes all
+       * five games and presses Home.
+       */
+      AppInterstitialAd.load();
+    }
+
     if (_gameIndex >=
         _games.length - 1) {
       await _finishDaily();
@@ -1220,8 +1221,7 @@ class _DailyPageState extends State<DailyPage> {
             .getInstance();
 
     final int userAge =
-        prefs.getInt('user_age') ??
-            25;
+        prefs.getInt('user_age') ?? 25;
 
     final int brainAge =
         BrainAgeService.calculate(
@@ -1249,8 +1249,7 @@ class _DailyPageState extends State<DailyPage> {
         dialogContext,
       ) {
         return WillPopScope(
-          onWillPop: () async =>
-              false,
+          onWillPop: () async => false,
           child: AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius:
@@ -1437,6 +1436,13 @@ class _DailyPageState extends State<DailyPage> {
                 child:
                     ElevatedButton.icon(
                   onPressed: () async {
+                    /*
+                     * The results remain visible
+                     * until the user presses Home.
+                     *
+                     * Then the second interstitial
+                     * is shown.
+                     */
                     await AppInterstitialAd
                         .show(context);
 
@@ -1526,9 +1532,15 @@ class _DailyPageState extends State<DailyPage> {
           SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing:
-            (8 * scale).clamp(6.0, 11.0),
+            (8 * scale).clamp(
+          6.0,
+          11.0,
+        ),
         mainAxisSpacing:
-            (8 * scale).clamp(6.0, 11.0),
+            (8 * scale).clamp(
+          6.0,
+          11.0,
+        ),
         mainAxisExtent: answerHeight,
       ),
       itemBuilder:
@@ -1596,13 +1608,6 @@ class _DailyPageState extends State<DailyPage> {
               final double w =
                   constraints.maxWidth;
 
-              /*
-               * Scale using BOTH available width
-               * and height.
-               *
-               * Reference design is roughly
-               * 390 x 760 logical pixels.
-               */
               final double widthScale =
                   w / 390.0;
 
@@ -1642,10 +1647,6 @@ class _DailyPageState extends State<DailyPage> {
                 62.0,
               );
 
-              /*
-               * With four answers the grid takes
-               * two rows.
-               */
               final int answerRows =
                   _options.isEmpty
                       ? 0
@@ -1662,14 +1663,6 @@ class _DailyPageState extends State<DailyPage> {
                           ((answerRows - 1) *
                               smallGap);
 
-              /*
-               * Calculate actual fixed content
-               * around the question card.
-               *
-               * Anything left is given to the
-               * white question card, so taller
-               * phones actually USE their height.
-               */
               final double headerHeight =
                   (46 * scale).clamp(
                 40.0,
@@ -1741,8 +1734,7 @@ class _DailyPageState extends State<DailyPage> {
                               _gameIndex,
                           progress:
                               progress,
-                          scale:
-                              scale,
+                          scale: scale,
                         ),
 
                         SizedBox(
