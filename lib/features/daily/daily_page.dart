@@ -37,7 +37,8 @@ class DailyPage extends StatefulWidget {
   const DailyPage({super.key});
 
   @override
-  State<DailyPage> createState() => _DailyPageState();
+  State<DailyPage> createState() =>
+      _DailyPageState();
 }
 
 class _DailyPageState extends State<DailyPage> {
@@ -50,11 +51,8 @@ class _DailyPageState extends State<DailyPage> {
   static const String _lastHeartRegenKey =
       'daily_last_heart_regen_ms';
 
-  final DailyEngine _engine =
-      DailyEngine();
-
-  final Random _random =
-      Random();
+  final DailyEngine _engine = DailyEngine();
+  final Random _random = Random();
 
   late final List<String> _games;
 
@@ -81,7 +79,6 @@ class _DailyPageState extends State<DailyPage> {
   Color? _questionColor;
 
   bool _orderRecallShowingSequence = false;
-
   String _orderRecallInput = '';
 
   List<String> _orderRecallAnswerSequence =
@@ -213,7 +210,6 @@ class _DailyPageState extends State<DailyPage> {
       setState(() {
         _heartsLeft = maxHearts;
       });
-
       return;
     }
 
@@ -244,8 +240,7 @@ class _DailyPageState extends State<DailyPage> {
     if (!mounted) return;
 
     setState(() {
-      _heartsLeft =
-          safeHearts;
+      _heartsLeft = safeHearts;
     });
   }
 
@@ -334,9 +329,7 @@ class _DailyPageState extends State<DailyPage> {
   void _resetSpecialGameState() {
     _questionColor = null;
 
-    _orderRecallShowingSequence =
-        false;
-
+    _orderRecallShowingSequence = false;
     _orderRecallInput = '';
 
     _orderRecallAnswerSequence =
@@ -348,8 +341,7 @@ class _DailyPageState extends State<DailyPage> {
     _orderRecallSelectableOptions =
         <String>[];
 
-    _memoryGridShowingPattern =
-        false;
+    _memoryGridShowingPattern = false;
 
     _memoryGridPattern =
         <int>[];
@@ -367,8 +359,7 @@ class _DailyPageState extends State<DailyPage> {
       final QuickMathQuestion q =
           QuickMathQuestions.all[
             _random.nextInt(
-              QuickMathQuestions
-                  .all.length,
+              QuickMathQuestions.all.length,
             )
           ];
 
@@ -377,8 +368,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.text;
 
-      _answer =
-          '${q.answer}';
+      _answer = '${q.answer}';
 
       _options = <String>[
         '${q.answer}',
@@ -393,10 +383,7 @@ class _DailyPageState extends State<DailyPage> {
         );
       }
 
-      _options.shuffle(
-        _random,
-      );
-
+      _options.shuffle(_random);
       return;
     }
 
@@ -440,36 +427,29 @@ class _DailyPageState extends State<DailyPage> {
         );
       }
 
-      _options.shuffle(
-        _random,
-      );
-
+      _options.shuffle(_random);
       return;
     }
 
-    if (game ==
-        GameIds.antonyms) {
+    if (game == GameIds.antonyms) {
       final AntonymQuestion q =
           AntonymQuestions.all[
             _random.nextInt(
-              AntonymQuestions
-                  .all.length,
+              AntonymQuestions.all.length,
             )
           ];
 
       _instruction =
           'Choose the opposite meaning';
 
-      _question =
-          q.word;
+      _question = q.word;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -487,16 +467,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'Choose the correct answer';
 
-      _question =
-          q.question;
+      _question = q.question;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -514,16 +492,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'Choose the correct answer';
 
-      _question =
-          q.question;
+      _question = q.question;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -541,16 +517,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'Choose the correct category';
 
-      _question =
-          q.word;
+      _question = q.word;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -568,16 +542,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'Unscramble the word';
 
-      _question =
-          q.scrambled;
+      _question = q.scrambled;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -589,8 +561,7 @@ class _DailyPageState extends State<DailyPage> {
         _random,
       );
 
-      _instruction =
-          q.instruction;
+      _instruction = q.instruction;
 
       _question =
           q.grid.join('   ');
@@ -626,8 +597,7 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'TAP THE COLOUR OF THE TEXT, NOT THE WORD';
 
-      _question =
-          q.word;
+      _question = q.word;
 
       _questionColor =
           _colourForName(
@@ -639,8 +609,7 @@ class _DailyPageState extends State<DailyPage> {
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -655,46 +624,38 @@ class _DailyPageState extends State<DailyPage> {
             )
           ];
 
-      _instruction =
-          q.prompt;
-
-      _question =
-          q.display;
+      _instruction = q.prompt;
+      _question = q.display;
 
       _options = <String>[
         'YES',
         'NO',
       ]..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
 
-    if (game ==
-        GameIds.sudoku) {
+    if (game == GameIds.sudoku) {
       final SudokuQuestion q =
           SudokuQuestions.all[
             _random.nextInt(
-              SudokuQuestions
-                  .all.length,
+              SudokuQuestions.all.length,
             )
           ];
 
       _instruction =
           'Fill the missing number';
 
-      _question =
-          q.row;
+      _question = q.row;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -712,16 +673,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'Tap the matching symbol';
 
-      _question =
-          q.target;
+      _question = q.target;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -734,16 +693,14 @@ class _DailyPageState extends State<DailyPage> {
       _instruction =
           'What comes next?';
 
-      _question =
-          q.sequence;
+      _question = q.sequence;
 
       _options =
           List<String>.from(
         q.options,
       )..shuffle(_random);
 
-      _answer =
-          q.answer;
+      _answer = q.answer;
 
       return;
     }
@@ -763,8 +720,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = '';
 
-      _options =
-          <String>[];
+      _options = <String>[];
 
       _answer =
           q.pattern.join(',');
@@ -774,11 +730,9 @@ class _DailyPageState extends State<DailyPage> {
         q.pattern,
       );
 
-      _memoryGridSelected
-          .clear();
+      _memoryGridSelected.clear();
 
-      _memoryGridShowingPattern =
-          true;
+      _memoryGridShowingPattern = true;
 
       Future.delayed(
         const Duration(
@@ -843,8 +797,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _orderRecallInput = '';
 
-      _options =
-          <String>['OK'];
+      _options = <String>['OK'];
 
       _answer =
           _orderRecallAnswerSequence
@@ -904,8 +857,7 @@ class _DailyPageState extends State<DailyPage> {
                 ? '✅ Correct'
                 : '❌ Wrong',
           ),
-          duration:
-              const Duration(
+          duration: const Duration(
             milliseconds: 450,
           ),
           behavior:
@@ -917,17 +869,14 @@ class _DailyPageState extends State<DailyPage> {
               : const Color(
                   0xFFE94D5F,
                 ),
-          shape:
-              RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius:
                 BorderRadius.circular(
               16,
             ),
           ),
           margin:
-              const EdgeInsets.all(
-            16,
-          ),
+              const EdgeInsets.all(16),
         ),
       );
   }
@@ -950,9 +899,7 @@ class _DailyPageState extends State<DailyPage> {
     }
 
     setState(() {
-      _memoryGridSelected.add(
-        index,
-      );
+      _memoryGridSelected.add(index);
     });
 
     final bool correctTile =
@@ -976,9 +923,7 @@ class _DailyPageState extends State<DailyPage> {
       _memoryGridSelected.contains,
     );
 
-    if (!completed) {
-      return;
-    }
+    if (!completed) return;
 
     _attempts++;
     _correct++;
@@ -1076,10 +1021,8 @@ class _DailyPageState extends State<DailyPage> {
                 .length;
         i++
       ) {
-        if (
-          _orderRecallSelectedSequence[i] !=
-              _orderRecallAnswerSequence[i]
-        ) {
+        if (_orderRecallSelectedSequence[i] !=
+            _orderRecallAnswerSequence[i]) {
           correct = false;
           break;
         }
@@ -1097,8 +1040,7 @@ class _DailyPageState extends State<DailyPage> {
           correctAnswer:
               _orderRecallAnswerSequence
                   .join(', '),
-          isCorrect:
-              correct,
+          isCorrect: correct,
         ),
       );
 
@@ -1107,9 +1049,7 @@ class _DailyPageState extends State<DailyPage> {
         _score++;
       }
 
-      _showResultToast(
-        correct,
-      );
+      _showResultToast(correct);
 
       Future.delayed(
         const Duration(
@@ -1136,14 +1076,10 @@ class _DailyPageState extends State<DailyPage> {
       QuestionResult(
         gameId:
             _games[_gameIndex],
-        question:
-            _question,
-        userAnswer:
-            selected,
-        correctAnswer:
-            _answer,
-        isCorrect:
-            correct,
+        question: _question,
+        userAnswer: selected,
+        correctAnswer: _answer,
+        isCorrect: correct,
       ),
     );
 
@@ -1152,9 +1088,7 @@ class _DailyPageState extends State<DailyPage> {
       _score++;
     }
 
-    _showResultToast(
-      correct,
-    );
+    _showResultToast(correct);
 
     setState(() {
       _nextQuestion();
@@ -1162,9 +1096,7 @@ class _DailyPageState extends State<DailyPage> {
   }
 
   Future<void> _finishGame() async {
-    if (_finishingGame) {
-      return;
-    }
+    if (_finishingGame) return;
 
     _finishingGame = true;
 
@@ -1196,12 +1128,9 @@ class _DailyPageState extends State<DailyPage> {
       GameResult(
         gameId:
             _games[_gameIndex],
-        score:
-            _score,
-        correct:
-            _correct,
-        attempts:
-            _attempts,
+        score: _score,
+        correct: _correct,
+        attempts: _attempts,
         averageResponseTimeMs:
             averageResponseTimeMs,
         playedAt:
@@ -1217,10 +1146,8 @@ class _DailyPageState extends State<DailyPage> {
       ),
     );
 
-    if (
-      _gameIndex >=
-          _games.length - 1
-    ) {
+    if (_gameIndex >=
+        _games.length - 1) {
       await _finishDaily();
       return;
     }
@@ -1238,50 +1165,42 @@ class _DailyPageState extends State<DailyPage> {
     final double accuracy =
         _results
                 .map(
-                  (e) =>
-                      e.accuracy,
+                  (e) => e.accuracy,
                 )
                 .fold<double>(
                   0,
-                  (a, b) =>
-                      a + b,
+                  (a, b) => a + b,
                 ) /
             _results.length;
 
     final int totalScore =
         _results
             .map(
-              (e) =>
-                  e.score,
+              (e) => e.score,
             )
             .fold<int>(
               0,
-              (a, b) =>
-                  a + b,
+              (a, b) => a + b,
             );
 
     final int totalCorrect =
         _results
             .map(
-              (e) =>
-                  e.correct,
+              (e) => e.correct,
             )
             .fold<int>(
               0,
-              (a, b) =>
-                  a + b,
+              (a, b) => a + b,
             );
 
     final int totalAttempts =
         _results
             .map(
-              (e) =>
-                  e.attempts,
+              (e) => e.attempts,
             )
             .fold<int>(
               0,
-              (a, b) =>
-                  a + b,
+              (a, b) => a + b,
             );
 
     final double averageResponseTime =
@@ -1292,8 +1211,7 @@ class _DailyPageState extends State<DailyPage> {
                 )
                 .fold<double>(
                   0,
-                  (a, b) =>
-                      a + b,
+                  (a, b) => a + b,
                 ) /
             _results.length;
 
@@ -1302,131 +1220,100 @@ class _DailyPageState extends State<DailyPage> {
             .getInstance();
 
     final int userAge =
-        prefs.getInt(
-          'user_age',
-        ) ??
-        25;
+        prefs.getInt('user_age') ??
+            25;
 
     final int brainAge =
         BrainAgeService.calculate(
-      accuracy:
-          accuracy,
+      accuracy: accuracy,
       responseTime:
           averageResponseTime,
-      score:
-          totalScore,
-      chronologicalAge:
-          userAge,
+      score: totalScore,
+      chronologicalAge: userAge,
     );
 
-    await StatsService
-        .saveDailySession(
+    await StatsService.saveDailySession(
       DailySessionResult(
-        gameResults:
-            _results,
-        brainAge:
-            brainAge,
-        completedAt:
-            DateTime.now(),
+        gameResults: _results,
+        brainAge: brainAge,
+        completedAt: DateTime.now(),
       ),
     );
 
     if (!mounted) return;
 
     await showDialog<void>(
-      context:
-          context,
-      barrierDismissible:
-          false,
-      builder:
-          (dialogContext) {
+      context: context,
+      barrierDismissible: false,
+      builder: (
+        dialogContext,
+      ) {
         return WillPopScope(
-          onWillPop:
-              () async =>
-                  false,
-          child:
-              AlertDialog(
-            shape:
-                RoundedRectangleBorder(
+          onWillPop: () async =>
+              false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
               borderRadius:
                   BorderRadius.circular(
-                24,
+                26,
               ),
             ),
-            title:
-                const Column(
+            title: const Column(
               children: [
                 Icon(
-                  Icons
-                      .emoji_events_rounded,
-                  color:
-                      Color(
+                  Icons.emoji_events_rounded,
+                  color: Color(
                     0xFFFFB92E,
                   ),
-                  size:
-                      42,
+                  size: 46,
                 ),
-                SizedBox(
-                  height:
-                      6,
-                ),
+                SizedBox(height: 8),
                 Text(
                   'Daily Complete!',
                   textAlign:
                       TextAlign.center,
-                  style:
-                      TextStyle(
+                  style: TextStyle(
                     fontWeight:
                         FontWeight.w900,
                   ),
                 ),
               ],
             ),
-            content:
-                Column(
+            content: Column(
               mainAxisSize:
                   MainAxisSize.min,
               children: [
                 const Text(
                   'YOUR BRAIN AGE',
-                  style:
-                      TextStyle(
-                    color:
-                        Colors.grey,
-                    fontSize:
-                        12,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
                     fontWeight:
                         FontWeight.w900,
                   ),
                 ),
-                const SizedBox(
-                  height:
-                      4,
-                ),
+
+                const SizedBox(height: 6),
+
                 Text(
                   '$brainAge',
-                  style:
-                      const TextStyle(
+                  style: const TextStyle(
                     color:
-                        Color(
-                      0xFF202024,
-                    ),
-                    fontSize:
-                        54,
+                        Color(0xFF202024),
+                    fontSize: 60,
                     fontWeight:
                         FontWeight.w900,
-                    height:
-                        1,
+                    height: 1,
                   ),
                 ),
-                const SizedBox(
-                  height:
-                      14,
-                ),
+
+                const SizedBox(height: 18),
+
                 Container(
+                  width: double.infinity,
                   padding:
                       const EdgeInsets.all(
-                    12,
+                    14,
                   ),
                   decoration:
                       BoxDecoration(
@@ -1436,18 +1323,24 @@ class _DailyPageState extends State<DailyPage> {
                     ),
                     borderRadius:
                         BorderRadius.circular(
-                      14,
+                      16,
                     ),
                   ),
-                  child:
-                      Column(
+                  child: Column(
                     children: [
                       Row(
                         mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                            MainAxisAlignment
+                                .spaceBetween,
                         children: [
                           const Text(
                             'Score',
+                            style: TextStyle(
+                              color:
+                                  Colors.grey,
+                              fontWeight:
+                                  FontWeight.w700,
+                            ),
                           ),
                           Text(
                             '$totalScore',
@@ -1459,20 +1352,29 @@ class _DailyPageState extends State<DailyPage> {
                               ),
                               fontWeight:
                                   FontWeight.w900,
+                              fontSize: 18,
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(
-                        height:
-                            8,
+                        height: 10,
                       ),
+
                       Row(
                         mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                            MainAxisAlignment
+                                .spaceBetween,
                         children: [
                           const Text(
                             'Correct',
+                            style: TextStyle(
+                              color:
+                                  Colors.grey,
+                              fontWeight:
+                                  FontWeight.w700,
+                            ),
                           ),
                           Text(
                             '$totalCorrect / $totalAttempts',
@@ -1488,16 +1390,24 @@ class _DailyPageState extends State<DailyPage> {
                           ),
                         ],
                       ),
+
                       const SizedBox(
-                        height:
-                            8,
+                        height: 10,
                       ),
+
                       Row(
                         mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                            MainAxisAlignment
+                                .spaceBetween,
                         children: [
                           const Text(
                             'Accuracy',
+                            style: TextStyle(
+                              color:
+                                  Colors.grey,
+                              fontWeight:
+                                  FontWeight.w700,
+                            ),
                           ),
                           Text(
                             '${(accuracy * 100).round()}%',
@@ -1518,30 +1428,25 @@ class _DailyPageState extends State<DailyPage> {
                 ),
               ],
             ),
+            actionsAlignment:
+                MainAxisAlignment.center,
             actions: [
               SizedBox(
-                width:
-                    double.infinity,
-                height:
-                    48,
+                width: double.infinity,
+                height: 52,
                 child:
                     ElevatedButton.icon(
-                  onPressed:
-                      () async {
+                  onPressed: () async {
                     await AppInterstitialAd
-                        .show(
-                      context,
-                    );
+                        .show(context);
 
                     if (!mounted) {
                       return;
                     }
 
-                    if (
-                      Navigator.of(
-                        dialogContext,
-                      ).canPop()
-                    ) {
+                    if (Navigator.of(
+                      dialogContext,
+                    ).canPop()) {
                       Navigator.of(
                         dialogContext,
                       ).pop();
@@ -1551,25 +1456,23 @@ class _DailyPageState extends State<DailyPage> {
                       return;
                     }
 
-                    Navigator.of(
-                      context,
-                    ).pop();
+                    Navigator.of(context)
+                        .pop();
                   },
-                  icon:
-                      const Icon(
+                  icon: const Icon(
                     Icons.home_rounded,
                   ),
-                  label:
-                      const Text(
+                  label: const Text(
                     'Home',
-                    style:
-                        TextStyle(
+                    style: TextStyle(
+                      fontSize: 17,
                       fontWeight:
                           FontWeight.w900,
                     ),
                   ),
                   style:
-                      ElevatedButton.styleFrom(
+                      ElevatedButton
+                          .styleFrom(
                     backgroundColor:
                         const Color(
                       0xFF625BEA,
@@ -1580,7 +1483,7 @@ class _DailyPageState extends State<DailyPage> {
                         RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(
-                        14,
+                        16,
                       ),
                     ),
                   ),
@@ -1593,30 +1496,40 @@ class _DailyPageState extends State<DailyPage> {
     );
   }
 
-  Widget _answerGrid() {
+  Widget _answerGrid({
+    required double answerHeight,
+    required double scale,
+  }) {
     if (_options.isEmpty) {
       return const SizedBox.shrink();
     }
 
+    if (_options.length == 1) {
+      return DailyAnswerButton(
+        text: _options.first,
+        onPressed: () =>
+            _tapAnswer(
+          _options.first,
+        ),
+        height: answerHeight,
+        scale: scale,
+      );
+    }
+
     return GridView.builder(
-      shrinkWrap:
-          true,
+      shrinkWrap: true,
       physics:
           const NeverScrollableScrollPhysics(),
-      padding:
-          EdgeInsets.zero,
-      itemCount:
-          _options.length,
+      padding: EdgeInsets.zero,
+      itemCount: _options.length,
       gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount:
-            2,
+          SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
         crossAxisSpacing:
-            8,
+            (8 * scale).clamp(6.0, 11.0),
         mainAxisSpacing:
-            8,
-        mainAxisExtent:
-            48,
+            (8 * scale).clamp(6.0, 11.0),
+        mainAxisExtent: answerHeight,
       ),
       itemBuilder:
           (context, index) {
@@ -1624,13 +1537,13 @@ class _DailyPageState extends State<DailyPage> {
             _options[index];
 
         return DailyAnswerButton(
-          text:
-              option,
-          onPressed:
-              () =>
-                  _tapAnswer(
+          text: option,
+          onPressed: () =>
+              _tapAnswer(
             option,
           ),
+          height: answerHeight,
+          scale: scale,
         );
       },
     );
@@ -1654,67 +1567,157 @@ class _DailyPageState extends State<DailyPage> {
             _games.length;
 
     return Scaffold(
-      body:
-          LayoutBuilder(
-        builder:
-            (
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration:
+            const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF4B0B8F),
+              Color(0xFF6413A8),
+              Color(0xFF7C20C8),
+            ],
+            begin:
+                Alignment.topCenter,
+            end:
+                Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (
               context,
               constraints,
             ) {
-          final bool compact =
-              constraints.maxHeight <
-                  760;
+              final double h =
+                  constraints.maxHeight;
 
-          return Container(
-            width:
-                double.infinity,
-            height:
-                double.infinity,
-            decoration:
-                const BoxDecoration(
-              gradient:
-                  LinearGradient(
-                colors: [
-                  Color(
-                    0xFF4B0B8F,
-                  ),
-                  Color(
-                    0xFF6413A8,
-                  ),
-                  Color(
-                    0xFF7C20C8,
-                  ),
-                ],
-                begin:
-                    Alignment.topCenter,
-                end:
-                    Alignment.bottomCenter,
-              ),
-            ),
-            child:
-                SafeArea(
-              child:
-                  Stack(
+              final double w =
+                  constraints.maxWidth;
+
+              /*
+               * Scale using BOTH available width
+               * and height.
+               *
+               * Reference design is roughly
+               * 390 x 760 logical pixels.
+               */
+              final double widthScale =
+                  w / 390.0;
+
+              final double heightScale =
+                  h / 760.0;
+
+              final double scale =
+                  min(
+                    widthScale,
+                    heightScale,
+                  ).clamp(
+                    0.82,
+                    1.18,
+                  );
+
+              final double outerPadding =
+                  (12 * scale).clamp(
+                9.0,
+                15.0,
+              );
+
+              final double smallGap =
+                  (8 * scale).clamp(
+                6.0,
+                11.0,
+              );
+
+              final double answerHeight =
+                  (54 * scale).clamp(
+                46.0,
+                64.0,
+              );
+
+              final double statHeight =
+                  (52 * scale).clamp(
+                45.0,
+                62.0,
+              );
+
+              /*
+               * With four answers the grid takes
+               * two rows.
+               */
+              final int answerRows =
+                  _options.isEmpty
+                      ? 0
+                      : _options.length == 1
+                          ? 1
+                          : (_options.length / 2)
+                              .ceil();
+
+              final double answerAreaHeight =
+                  answerRows == 0
+                      ? 0
+                      : (answerRows *
+                              answerHeight) +
+                          ((answerRows - 1) *
+                              smallGap);
+
+              /*
+               * Calculate actual fixed content
+               * around the question card.
+               *
+               * Anything left is given to the
+               * white question card, so taller
+               * phones actually USE their height.
+               */
+              final double headerHeight =
+                  (46 * scale).clamp(
+                40.0,
+                54.0,
+              );
+
+              final double progressHeight =
+                  (54 * scale).clamp(
+                46.0,
+                64.0,
+              );
+
+              final double fixedHeight =
+                  outerPadding +
+                      headerHeight +
+                      smallGap +
+                      progressHeight +
+                      smallGap +
+                      answerAreaHeight +
+                      (answerRows > 0
+                          ? smallGap
+                          : 0) +
+                      statHeight +
+                      outerPadding;
+
+              final double questionHeight =
+                  (h - fixedHeight).clamp(
+                285.0,
+                520.0,
+              );
+
+              return Stack(
                 children: [
                   const DailySparklesBackground(),
 
                   Padding(
                     padding:
                         EdgeInsets.fromLTRB(
-                      12,
-                      compact
-                          ? 6
-                          : 9,
-                      12,
-                      8,
+                      outerPadding,
+                      outerPadding,
+                      outerPadding,
+                      outerPadding,
                     ),
-                    child:
-                        Column(
+                    child: Column(
                       children: [
                         DailyHeader(
-                          onBack:
-                              () =>
-                                  Navigator.pop(
+                          onBack: () =>
+                              Navigator.pop(
                             context,
                           ),
                           heartsLeft:
@@ -1724,13 +1727,11 @@ class _DailyPageState extends State<DailyPage> {
                                       maxHearts
                                   ? _watchAdForHeart
                                   : null,
+                          scale: scale,
                         ),
 
                         SizedBox(
-                          height:
-                              compact
-                                  ? 7
-                                  : 9,
+                          height: smallGap,
                         ),
 
                         DailyStepProgress(
@@ -1740,16 +1741,17 @@ class _DailyPageState extends State<DailyPage> {
                               _gameIndex,
                           progress:
                               progress,
+                          scale:
+                              scale,
+                        ),
+
+                        SizedBox(
+                          height: smallGap,
                         ),
 
                         SizedBox(
                           height:
-                              compact
-                                  ? 7
-                                  : 10,
-                        ),
-
-                        Flexible(
+                              questionHeight,
                           child:
                               DailyQuestionCard(
                             title:
@@ -1766,8 +1768,6 @@ class _DailyPageState extends State<DailyPage> {
                                 _questionColor,
                             timeLeft:
                                 _timeLeft,
-                            compact:
-                                compact,
                             inputText:
                                 _orderRecallInput,
                             memoryGridPattern:
@@ -1778,19 +1778,27 @@ class _DailyPageState extends State<DailyPage> {
                                 _memoryGridShowingPattern,
                             onMemoryGridTap:
                                 _tapMemoryGridTile,
+                            scale:
+                                scale,
                           ),
                         ),
 
-                        const SizedBox(
-                          height:
-                              8,
+                        if (answerRows > 0)
+                          SizedBox(
+                            height:
+                                smallGap,
+                          ),
+
+                        _answerGrid(
+                          answerHeight:
+                              answerHeight,
+                          scale:
+                              scale,
                         ),
 
-                        _answerGrid(),
-
-                        const SizedBox(
+                        SizedBox(
                           height:
-                              7,
+                              smallGap,
                         ),
 
                         Row(
@@ -1804,12 +1812,16 @@ class _DailyPageState extends State<DailyPage> {
                                     'Score',
                                 value:
                                     '$_score',
+                                height:
+                                    statHeight,
+                                scale:
+                                    scale,
                               ),
                             ),
 
-                            const SizedBox(
+                            SizedBox(
                               width:
-                                  8,
+                                  smallGap,
                             ),
 
                             Expanded(
@@ -1821,6 +1833,10 @@ class _DailyPageState extends State<DailyPage> {
                                     'Correct',
                                 value:
                                     '$_correct',
+                                height:
+                                    statHeight,
+                                scale:
+                                    scale,
                               ),
                             ),
                           ],
@@ -1829,10 +1845,10 @@ class _DailyPageState extends State<DailyPage> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
