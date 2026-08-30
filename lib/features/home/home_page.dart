@@ -14,15 +14,19 @@ import '../free_play/free_play_page.dart';
 import '../stats/stats_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+  });
 
   @override
   State<HomePage> createState() =>
       _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  static const String _ageKey = 'user_age';
+class _HomePageState extends State<HomePage>
+    with WidgetsBindingObserver {
+  static const String _ageKey =
+      'user_age';
 
   static const String _notificationEnabledKey =
       'daily_notifications_enabled';
@@ -43,6 +47,10 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(
+      this,
+    );
+
     _loadHome();
 
     if (!kIsWeb) {
@@ -52,8 +60,46 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(
+      this,
+    );
+
     _ageController.dispose();
+
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    /*
+     * When the Apple permission popup closes,
+     * or when the user returns from iOS Settings,
+     * refresh the saved notification state.
+     *
+     * This makes the toggle update automatically.
+     */
+    if (state == AppLifecycleState.resumed) {
+      _refreshNotificationToggle();
+    }
+  }
+
+  Future<void> _refreshNotificationToggle() async {
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
+
+    final bool enabled =
+        prefs.getBool(
+          _notificationEnabledKey,
+        ) ??
+        false;
+
+    if (!mounted) return;
+
+    setState(() {
+      _notificationsEnabled = enabled;
+    });
   }
 
   Future<void> _loadHome() async {
@@ -61,7 +107,8 @@ class _HomePageState extends State<HomePage> {
         await SharedPreferences.getInstance();
 
     final int savedAge =
-        prefs.getInt(_ageKey) ?? 25;
+        prefs.getInt(_ageKey) ??
+        25;
 
     final int hearts =
         await DailyHeartsService.getHearts();
@@ -84,12 +131,23 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     setState(() {
-      _ageController.text = '$savedAge';
+      _ageController.text =
+          '$savedAge';
+
       _userAge = savedAge;
-      _brainAge = latestBrainAge;
-      _totalChecks = totalChecks;
-      _currentStreak = currentStreak;
-      _hearts = hearts;
+
+      _brainAge =
+          latestBrainAge;
+
+      _totalChecks =
+          totalChecks;
+
+      _currentStreak =
+          currentStreak;
+
+      _hearts =
+          hearts;
+
       _notificationsEnabled =
           notificationsEnabled;
     });
@@ -114,6 +172,9 @@ class _HomePageState extends State<HomePage> {
     final SharedPreferences prefs =
         await SharedPreferences.getInstance();
 
+    /*
+     * USER TURNED NOTIFICATIONS OFF
+     */
     if (!enabled) {
       await DailyNotificationService
           .cancelDailyReminder();
@@ -135,7 +196,7 @@ class _HomePageState extends State<HomePage> {
         ..showSnackBar(
           const SnackBar(
             content: Text(
-              'Daily reminder turned off.',
+              'Daily reminders turned off.',
             ),
             duration: Duration(
               milliseconds: 1200,
@@ -146,17 +207,30 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    /*
+     * USER TURNED NOTIFICATIONS ON
+     *
+     * Ask Apple for permission.
+     */
     final bool granted =
         await DailyNotificationService
             .requestPermission();
 
     if (!mounted) return;
 
+    /*
+     * Apple permission denied.
+     */
     if (!granted) {
       await prefs.setBool(
         _notificationEnabledKey,
         false,
       );
+
+      await DailyNotificationService
+          .cancelDailyReminder();
+
+      if (!mounted) return;
 
       setState(() {
         _notificationsEnabled = false;
@@ -179,13 +253,19 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    await DailyNotificationService
-        .scheduleDailyReminder();
-
+    /*
+     * Apple permission accepted.
+     *
+     * Immediately save the app toggle as ON
+     * and schedule BOTH reminders.
+     */
     await prefs.setBool(
       _notificationEnabledKey,
       true,
     );
+
+    await DailyNotificationService
+        .scheduleDailyReminder();
 
     if (!mounted) return;
 
@@ -199,10 +279,10 @@ class _HomePageState extends State<HomePage> {
       ..showSnackBar(
         const SnackBar(
           content: Text(
-            '🔔 Daily reminder turned on for 7:00 PM.',
+            '🔔 Daily reminders on for 10 AM and 6 PM.',
           ),
           duration: Duration(
-            milliseconds: 1500,
+            milliseconds: 1600,
           ),
         ),
       );
@@ -214,7 +294,9 @@ class _HomePageState extends State<HomePage> {
       _ageController.text.trim(),
     );
 
-    if (age == null) return;
+    if (age == null) {
+      return;
+    }
 
     final SharedPreferences prefs =
         await SharedPreferences.getInstance();
@@ -233,7 +315,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _startDailyBrainCheck() async {
     final bool canPlay =
-        await DailyHeartsService.consumeHeart();
+        await DailyHeartsService
+            .consumeHeart();
 
     if (!mounted) return;
 
@@ -258,7 +341,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     final int hearts =
-        await DailyHeartsService.getHearts();
+        await DailyHeartsService
+            .getHearts();
 
     if (!mounted) return;
 
@@ -309,7 +393,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     final int hearts =
-        await DailyHeartsService.addHeart();
+        await DailyHeartsService
+            .addHeart();
 
     if (!mounted) return;
 
@@ -351,7 +436,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _heartIcons() {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize:
+          MainAxisSize.min,
       children: List.generate(
         DailyHeartsService.maxHearts,
         (index) {
@@ -364,8 +450,11 @@ class _HomePageState extends State<HomePage> {
               horizontal: 4,
             ),
             child: Text(
-              filled ? '❤️' : '🩶',
-              style: const TextStyle(
+              filled
+                  ? '❤️'
+                  : '🩶',
+              style:
+                  const TextStyle(
                 fontSize: 25,
               ),
             ),
@@ -384,7 +473,8 @@ class _HomePageState extends State<HomePage> {
     return SizedBox(
       height: 36,
       child: ElevatedButton.icon(
-        onPressed: _watchAdForHeart,
+        onPressed:
+            _watchAdForHeart,
         icon: const Icon(
           Icons.play_circle_fill_rounded,
           size: 17,
@@ -392,17 +482,23 @@ class _HomePageState extends State<HomePage> {
         label: const Text(
           'Watch Ad',
         ),
-        style: ElevatedButton.styleFrom(
+        style:
+            ElevatedButton.styleFrom(
           elevation: 3,
           backgroundColor:
-              const Color(0xFFFFD247),
+              const Color(
+            0xFFFFD247,
+          ),
           foregroundColor:
-              const Color(0xFF35125A),
+              const Color(
+            0xFF35125A,
+          ),
           padding:
               const EdgeInsets.symmetric(
             horizontal: 12,
           ),
-          shape: RoundedRectangleBorder(
+          shape:
+              RoundedRectangleBorder(
             borderRadius:
                 BorderRadius.circular(
               999,
@@ -421,7 +517,8 @@ class _HomePageState extends State<HomePage> {
         left: 8,
         right: 3,
       ),
-      decoration: BoxDecoration(
+      decoration:
+          BoxDecoration(
         color:
             Colors.white.withOpacity(
           0.14,
@@ -447,7 +544,8 @@ class _HomePageState extends State<HomePage> {
                     .notifications_active_rounded
                 : Icons
                     .notifications_none_rounded,
-            color: Colors.white,
+            color:
+                Colors.white,
             size: 20,
           ),
 
@@ -490,7 +588,8 @@ class _HomePageState extends State<HomePage> {
         22,
         18,
       ),
-      decoration: BoxDecoration(
+      decoration:
+          BoxDecoration(
         color: Colors.white,
         borderRadius:
             BorderRadius.circular(
@@ -502,7 +601,8 @@ class _HomePageState extends State<HomePage> {
           const Text(
             'YOUR BRAIN AGE',
             style: TextStyle(
-              color: Colors.grey,
+              color:
+                  Colors.grey,
               fontSize: 14,
               fontWeight:
                   FontWeight.w900,
@@ -515,9 +615,12 @@ class _HomePageState extends State<HomePage> {
 
           Text(
             '$_brainAge',
-            style: const TextStyle(
+            style:
+                const TextStyle(
               color:
-                  Color(0xFF202024),
+                  Color(
+                0xFF202024,
+              ),
               fontSize: 58,
               fontWeight:
                   FontWeight.w900,
@@ -533,7 +636,8 @@ class _HomePageState extends State<HomePage> {
             _comparisonText(),
             textAlign:
                 TextAlign.center,
-            style: const TextStyle(
+            style:
+                const TextStyle(
               color: Colors.grey,
               fontSize: 14,
               fontWeight:
@@ -551,7 +655,8 @@ class _HomePageState extends State<HomePage> {
               horizontal: 13,
               vertical: 7,
             ),
-            decoration: BoxDecoration(
+            decoration:
+                BoxDecoration(
               color:
                   const Color(
                 0xFFF4F2FF,
@@ -599,9 +704,11 @@ class _HomePageState extends State<HomePage> {
           ),
 
           SizedBox(
-            width: double.infinity,
+            width:
+                double.infinity,
             height: 54,
-            child: ElevatedButton(
+            child:
+                ElevatedButton(
               onPressed:
                   _startDailyBrainCheck,
               style:
@@ -623,9 +730,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              child: const Text(
+              child:
+                  const Text(
                 'Start Daily Brain Check',
-                style: TextStyle(
+                style:
+                    TextStyle(
                   fontSize: 18,
                   fontWeight:
                       FontWeight.w900,
@@ -639,12 +748,15 @@ class _HomePageState extends State<HomePage> {
           ),
 
           SizedBox(
-            width: double.infinity,
+            width:
+                double.infinity,
             height: 48,
             child:
                 OutlinedButton.icon(
-              onPressed: () async {
-                await Navigator.push(
+              onPressed:
+                  () async {
+                await Navigator
+                    .push(
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
@@ -659,11 +771,11 @@ class _HomePageState extends State<HomePage> {
                 await _loadHome();
               },
               icon: const Icon(
-                Icons
-                    .analytics_rounded,
+                Icons.analytics_rounded,
                 size: 20,
               ),
-              label: const Text(
+              label:
+                  const Text(
                 'View Daily Results',
               ),
               style:
@@ -675,7 +787,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 side:
                     const BorderSide(
-                  color: Color(
+                  color:
+                      Color(
                     0xFF625BEA,
                   ),
                   width: 2,
@@ -712,7 +825,8 @@ class _HomePageState extends State<HomePage> {
         18,
         12,
       ),
-      decoration: BoxDecoration(
+      decoration:
+          BoxDecoration(
         color: Colors.white,
         borderRadius:
             BorderRadius.circular(
@@ -727,7 +841,9 @@ class _HomePageState extends State<HomePage> {
             'Your Age',
             style: TextStyle(
               color:
-                  Color(0xFF202024),
+                  Color(
+                0xFF202024,
+              ),
               fontSize: 19,
               fontWeight:
                   FontWeight.w900,
@@ -748,14 +864,16 @@ class _HomePageState extends State<HomePage> {
               textInputAction:
                   TextInputAction.done,
               onSubmitted: (_) {
-                FocusScope.of(context)
-                    .unfocus();
+                FocusScope.of(
+                  context,
+                ).unfocus();
 
                 _saveAge();
               },
               onTapOutside: (_) {
-                FocusScope.of(context)
-                    .unfocus();
+                FocusScope.of(
+                  context,
+                ).unfocus();
 
                 _saveAge();
               },
@@ -772,7 +890,8 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () =>
                       _ageController
                           .clear(),
-                  icon: const Icon(
+                  icon:
+                      const Icon(
                     Icons.close_rounded,
                   ),
                 ),
@@ -793,7 +912,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   borderSide:
                       const BorderSide(
-                    color: Color(
+                    color:
+                        Color(
                       0xFF625BEA,
                     ),
                     width: 2,
@@ -820,8 +940,10 @@ class _HomePageState extends State<HomePage> {
             ),
             child: Text(
               'Tap away or press done to save',
-              style: TextStyle(
-                color: Colors.grey,
+              style:
+                  TextStyle(
+                color:
+                    Colors.grey,
                 fontSize: 12,
                 fontWeight:
                     FontWeight.w500,
@@ -860,8 +982,7 @@ class _HomePageState extends State<HomePage> {
             ),
             child: Column(
               mainAxisAlignment:
-                  MainAxisAlignment
-                      .center,
+                  MainAxisAlignment.center,
               children: [
                 Icon(
                   icon,
@@ -902,7 +1023,8 @@ class _HomePageState extends State<HomePage> {
                       TextAlign.center,
                   style:
                       const TextStyle(
-                    color: Colors.grey,
+                    color:
+                        Colors.grey,
                     fontSize: 13,
                     fontWeight:
                         FontWeight.w600,
@@ -922,19 +1044,24 @@ class _HomePageState extends State<HomePage> {
   ) {
     return GestureDetector(
       onTap: () {
-        FocusScope.of(context)
-            .unfocus();
+        FocusScope.of(
+          context,
+        ).unfocus();
 
         _saveAge();
       },
       child: Scaffold(
         body: Container(
-          width: double.infinity,
-          height: double.infinity,
+          width:
+              double.infinity,
+          height:
+              double.infinity,
           decoration:
               const BoxDecoration(
             color:
-                Color(0xFF625BEA),
+                Color(
+              0xFF625BEA,
+            ),
           ),
           child: SafeArea(
             child: Column(
@@ -950,12 +1077,14 @@ class _HomePageState extends State<HomePage> {
                       12,
                       10,
                     ),
-                    child: Column(
+                    child:
+                        Column(
                       children: [
                         Row(
                           children: [
                             const Expanded(
-                              child: Text(
+                              child:
+                                  Text(
                                 'Brain Age Daily',
                                 style:
                                     TextStyle(
@@ -964,8 +1093,7 @@ class _HomePageState extends State<HomePage> {
                                   fontSize:
                                       29,
                                   fontWeight:
-                                      FontWeight
-                                          .w900,
+                                      FontWeight.w900,
                                 ),
                               ),
                             ),
@@ -997,19 +1125,19 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           children: [
                             _menuCard(
-                              icon: Icons
-                                  .sports_esports_rounded,
+                              icon:
+                                  Icons.sports_esports_rounded,
                               title:
                                   'Free Play',
                               subtitle:
                                   'Unlimited training',
-                              onTap: () {
+                              onTap:
+                                  () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder:
-                                        (_) =>
-                                            const FreePlayPage(),
+                                    builder: (_) =>
+                                        const FreePlayPage(),
                                   ),
                                 );
                               },
@@ -1020,21 +1148,19 @@ class _HomePageState extends State<HomePage> {
                             ),
 
                             _menuCard(
-                              icon: Icons
-                                  .trending_up_rounded,
+                              icon:
+                                  Icons.trending_up_rounded,
                               title:
                                   'Progress',
                               subtitle:
                                   'Graphs & stats',
                               onTap:
                                   () async {
-                                await Navigator
-                                    .push(
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder:
-                                        (_) =>
-                                            const StatsPage(),
+                                    builder: (_) =>
+                                        const StatsPage(),
                                   ),
                                 );
 

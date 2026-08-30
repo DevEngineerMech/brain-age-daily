@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -10,7 +11,11 @@ class DailyNotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
-  static const int _dailyReminderId = 1001;
+  static const String notificationEnabledKey =
+      'daily_notifications_enabled';
+
+  static const int _morningReminderId = 1001;
+  static const int _eveningReminderId = 1002;
 
   static bool _initialized = false;
 
@@ -102,12 +107,20 @@ class DailyNotificationService {
     return granted ?? false;
   }
 
-  static Future<void>
-      requestPermissionAndSchedule() async {
-    if (kIsWeb) return;
+  /// Called when the app starts for the first time.
+  ///
+  /// If the user accepts Apple's notification permission:
+  /// - save the toggle as ON
+  /// - schedule 10 AM
+  /// - schedule 6 PM
+  ///
+  /// If they decline:
+  /// - save the toggle as OFF
+  static Future<bool> requestPermissionAndSchedule() async {
+    if (kIsWeb) return false;
 
     if (defaultTargetPlatform != TargetPlatform.iOS) {
-      return;
+      return false;
     }
 
     await initialize();
@@ -115,19 +128,43 @@ class DailyNotificationService {
     final bool granted =
         await requestPermission();
 
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
+
     if (!granted) {
+      await prefs.setBool(
+        notificationEnabledKey,
+        false,
+      );
+
+      await cancelDailyReminder();
+
       debugPrint(
         'Notification permission was not granted.',
       );
 
-      return;
+      return false;
     }
 
+    await prefs.setBool(
+      notificationEnabledKey,
+      true,
+    );
+
     await scheduleDailyReminder();
+
+    debugPrint(
+      'Notification permission granted. Toggle enabled automatically.',
+    );
+
+    return true;
   }
 
-  static Future<void>
-      scheduleDailyReminder() async {
+  /// Schedules TWO repeating iOS local notifications:
+  ///
+  /// 10:00 AM
+  /// 6:00 PM
+  static Future<void> scheduleDailyReminder() async {
     if (kIsWeb) return;
 
     if (defaultTargetPlatform != TargetPlatform.iOS) {
@@ -136,13 +173,18 @@ class DailyNotificationService {
 
     await initialize();
 
-    await _notifications.cancel(
-      _dailyReminderId,
+    // Remove any old reminders first.
+    await cancelDailyReminder();
+
+    final tz.TZDateTime nextMorningReminder =
+        _nextReminderTime(
+      hour: 10,
+      minute: 0,
     );
 
-    final tz.TZDateTime nextReminder =
+    final tz.TZDateTime nextEveningReminder =
         _nextReminderTime(
-      hour: 19,
+      hour: 18,
       minute: 0,
     );
 
@@ -158,24 +200,44 @@ class DailyNotificationService {
       iOS: iosDetails,
     );
 
+    // 10:00 AM reminder
     await _notifications.zonedSchedule(
-      _dailyReminderId,
+      _morningReminderId,
       '🧠 Your Brain Check is ready',
-      'Take today’s Brain Age Daily challenge and keep your streak going!',
-      nextReminder,
+      'Start your day with today’s Brain Age Daily challenge!',
+      nextMorningReminder,
       notificationDetails,
-      payload: 'daily_brain_check',
+      payload: 'daily_brain_check_morning',
       androidScheduleMode:
           AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation
-              .absoluteTime,
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents:
+          DateTimeComponents.time,
+    );
+
+    // 6:00 PM reminder
+    await _notifications.zonedSchedule(
+      _eveningReminderId,
+      '🧠 Don’t forget your Brain Check',
+      'Complete today’s Brain Age Daily challenge and keep your streak going!',
+      nextEveningReminder,
+      notificationDetails,
+      payload: 'daily_brain_check_evening',
+      androidScheduleMode:
+          AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents:
           DateTimeComponents.time,
     );
 
     debugPrint(
-      'Daily notification scheduled for $nextReminder',
+      'Morning notification scheduled for $nextMorningReminder',
+    );
+
+    debugPrint(
+      'Evening notification scheduled for $nextEveningReminder',
     );
   }
 
@@ -210,8 +272,8 @@ class DailyNotificationService {
     return scheduled;
   }
 
-  static Future<void>
-      cancelDailyReminder() async {
+  /// Cancels BOTH daily reminders.
+  static Future<void> cancelDailyReminder() async {
     if (kIsWeb) return;
 
     if (defaultTargetPlatform != TargetPlatform.iOS) {
@@ -221,16 +283,19 @@ class DailyNotificationService {
     await initialize();
 
     await _notifications.cancel(
-      _dailyReminderId,
+      _morningReminderId,
+    );
+
+    await _notifications.cancel(
+      _eveningReminderId,
     );
 
     debugPrint(
-      'Daily reminder cancelled.',
+      'Morning and evening daily reminders cancelled.',
     );
   }
 
-  static Future<void>
-      rescheduleDailyReminder() async {
+  static Future<void> rescheduleDailyReminder() async {
     if (kIsWeb) return;
 
     if (defaultTargetPlatform != TargetPlatform.iOS) {
@@ -240,5 +305,27 @@ class DailyNotificationService {
     await initialize();
 
     await scheduleDailyReminder();
+  }
+
+  static Future<bool> notificationsEnabled() async {
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
+
+    return prefs.getBool(
+          notificationEnabledKey,
+        ) ??
+        false;
+  }
+
+  static Future<void> setNotificationsEnabled(
+    bool enabled,
+  ) async {
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
+
+    await prefs.setBool(
+      notificationEnabledKey,
+      enabled,
+    );
   }
 }

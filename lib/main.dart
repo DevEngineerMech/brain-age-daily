@@ -14,7 +14,9 @@ Future<void> main() async {
 
   await DailyNotificationService.initialize();
 
-  runApp(const BrainAgeDailyApp());
+  runApp(
+    const BrainAgeDailyApp(),
+  );
 }
 
 class BrainAgeDailyApp extends StatefulWidget {
@@ -50,6 +52,31 @@ class _BrainAgeDailyAppState
     _notificationSetupStarted = true;
 
     if (kIsWeb) {
+      return;
+    }
+
+    /*
+     * Check whether notifications have already
+     * been enabled through the app.
+     *
+     * If they have, simply make sure the two
+     * daily reminders are scheduled.
+     *
+     * If they have not, request Apple's
+     * notification permission.
+     *
+     * When Apple permission is accepted,
+     * requestPermissionAndSchedule() automatically
+     * saves the notification toggle as ON.
+     */
+    final bool alreadyEnabled =
+        await DailyNotificationService
+            .notificationsEnabled();
+
+    if (alreadyEnabled) {
+      await DailyNotificationService
+          .scheduleDailyReminder();
+
       return;
     }
 
