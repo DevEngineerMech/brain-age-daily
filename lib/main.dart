@@ -7,6 +7,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'core/services/analytics_service.dart';
 import 'core/services/daily_notification_service.dart';
 import 'features/home/home_page.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,18 +16,17 @@ Future<void> main() async {
   // FIREBASE
   // ------------------------------------------------------------
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // IMPORTANT:
-  // Initialise our AnalyticsService after Firebase.
   await AnalyticsService.initialize();
 
-  // Extra launch event so we can easily confirm
-  // that this build is reaching Firebase.
-  await AnalyticsService.analytics.logEvent(
-    name: 'app_started',
-    parameters: {
-      'source': 'main',
+  await AnalyticsService.logTestEvent(
+    'app_started',
+    {
+      'platform':
+          kIsWeb ? 'web' : defaultTargetPlatform.name,
     },
   );
 
@@ -80,12 +80,10 @@ class _BrainAgeDailyAppState
   }
 
   Future<void> _afterFirstFrame() async {
-    // Track the home screen.
     await AnalyticsService.screen(
       'home',
     );
 
-    // Normal user-facing 10am / 6pm reminders.
     if (!kIsWeb) {
       await _setupNotifications();
     }

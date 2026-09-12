@@ -13,33 +13,55 @@ class AnalyticsService {
   static bool _initialized = false;
 
   static Future<void> initialize() async {
-  if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
 
-  await analytics.setAnalyticsCollectionEnabled(true);
+    try {
+      await analytics
+          .setAnalyticsCollectionEnabled(true);
 
-  _foregroundStartedAt = DateTime.now();
-  _appSessionStartedAt = DateTime.now();
+      _foregroundStartedAt =
+          DateTime.now();
 
-  await _log(
-    'app_session_started',
-    {
-      'source': 'app_launch',
-    },
-  );
+      _appSessionStartedAt =
+          DateTime.now();
 
-  _initialized = true;
-}
+      await _log(
+        'app_session_started',
+        {
+          'source': 'app_launch',
+          'platform':
+              kIsWeb
+                  ? 'web'
+                  : defaultTargetPlatform.name,
+        },
+      );
+
+      _initialized = true;
+
+      debugPrint(
+        'Firebase Analytics initialized successfully.',
+      );
+    } catch (e) {
+      debugPrint(
+        'Firebase Analytics initialization error: $e',
+      );
+    }
+  }
 
   static Future<void> _log(
     String name, [
     Map<String, Object>? parameters,
   ]) async {
-    if (kIsWeb) return;
-
     try {
       await analytics.logEvent(
         name: name,
         parameters: parameters,
+      );
+
+      debugPrint(
+        'Firebase Analytics event sent: $name',
       );
     } catch (e) {
       debugPrint(
@@ -49,17 +71,34 @@ class AnalyticsService {
   }
 
   // ------------------------------------------------------------
+  // TEST EVENT
+  // ------------------------------------------------------------
+
+  static Future<void> logTestEvent(
+    String name, [
+    Map<String, Object>? parameters,
+  ]) async {
+    await _log(
+      name,
+      parameters,
+    );
+  }
+
+  // ------------------------------------------------------------
   // SCREEN TRACKING
   // ------------------------------------------------------------
 
   static Future<void> screen(
     String screenName,
   ) async {
-    if (kIsWeb) return;
-
     try {
       await analytics.logScreenView(
         screenName: screenName,
+        screenClass: screenName,
+      );
+
+      debugPrint(
+        'Firebase screen sent: $screenName',
       );
     } catch (e) {
       debugPrint(
@@ -73,22 +112,34 @@ class AnalyticsService {
   // ------------------------------------------------------------
 
   static Future<void> appForegrounded() async {
-    _foregroundStartedAt = DateTime.now();
+    _foregroundStartedAt =
+        DateTime.now();
 
     await _log(
       'app_foregrounded',
+      {
+        'platform':
+            kIsWeb
+                ? 'web'
+                : defaultTargetPlatform.name,
+      },
     );
   }
 
   static Future<void> appBackgrounded() async {
-    final DateTime now = DateTime.now();
+    final DateTime now =
+        DateTime.now();
 
     final DateTime? foregroundStart =
         _foregroundStartedAt;
 
     if (foregroundStart != null) {
       final int foregroundSeconds =
-          now.difference(foregroundStart).inSeconds;
+          now
+              .difference(
+                foregroundStart,
+              )
+              .inSeconds;
 
       if (foregroundSeconds > 0) {
         await _log(
@@ -106,7 +157,11 @@ class AnalyticsService {
 
     if (sessionStart != null) {
       final int totalSeconds =
-          now.difference(sessionStart).inSeconds;
+          now
+              .difference(
+                sessionStart,
+              )
+              .inSeconds;
 
       if (totalSeconds > 0) {
         await _log(
@@ -214,15 +269,19 @@ class AnalyticsService {
     await _log(
       'daily_challenge_completed',
       {
-        'brain_age': brainAge,
+        'brain_age':
+            brainAge,
         'chronological_age':
             chronologicalAge,
         'brain_age_difference':
             brainAge -
                 chronologicalAge,
-        'score': score,
-        'correct': correct,
-        'attempts': attempts,
+        'score':
+            score,
+        'correct':
+            correct,
+        'attempts':
+            attempts,
         'duration_seconds':
             durationSeconds,
       },
@@ -237,7 +296,8 @@ class AnalyticsService {
     await _log(
       'brain_age_calculated',
       {
-        'brain_age': brainAge,
+        'brain_age':
+            brainAge,
         'chronological_age':
             chronologicalAge,
         'difference':
@@ -265,7 +325,8 @@ class AnalyticsService {
     await _log(
       'free_play_game_opened',
       {
-        'game_id': gameId,
+        'game_id':
+            gameId,
       },
     );
   }
@@ -278,7 +339,8 @@ class AnalyticsService {
     await _log(
       'free_play_game_exited',
       {
-        'game_id': gameId,
+        'game_id':
+            gameId,
         'duration_seconds':
             secondsPlayed,
       },
@@ -339,7 +401,8 @@ class AnalyticsService {
     await _log(
       'streak_viewed',
       {
-        'streak': streak,
+        'streak':
+            streak,
       },
     );
   }
@@ -357,9 +420,12 @@ class AnalyticsService {
     await _log(
       'notification_scheduled',
       {
-        'slot': slot,
-        'notification_type': type,
-        'variant': variant,
+        'slot':
+            slot,
+        'notification_type':
+            type,
+        'variant':
+            variant,
       },
     );
   }
@@ -373,9 +439,12 @@ class AnalyticsService {
     await _log(
       'notification_opened',
       {
-        'slot': slot,
-        'notification_type': type,
-        'variant': variant,
+        'slot':
+            slot,
+        'notification_type':
+            type,
+        'variant':
+            variant,
       },
     );
   }
@@ -392,13 +461,17 @@ class AnalyticsService {
   }) async {
     final Map<String, Object>
         parameters = {
-      'action': action,
-      'ad_format': format,
-      'placement': placement,
+      'action':
+          action,
+      'ad_format':
+          format,
+      'placement':
+          placement,
     };
 
     if (error != null) {
-      parameters['error'] = error;
+      parameters['error'] =
+          error;
     }
 
     await _log(
@@ -417,8 +490,10 @@ class AnalyticsService {
     await _log(
       'ad_revenue',
       {
-        'ad_format': format,
-        'placement': placement,
+        'ad_format':
+            format,
+        'placement':
+            placement,
         'value_micros':
             valueMicros,
         'currency':
