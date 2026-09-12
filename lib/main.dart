@@ -1,11 +1,13 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 
-import 'core/services/daily_notification_service.dart';
 import 'core/services/analytics_service.dart';
+import 'core/services/daily_notification_service.dart';
+import 'core/services/owner_analytics_service.dart';
+
 import 'features/home/home_page.dart';
 
 Future<void> main() async {
@@ -13,18 +15,23 @@ Future<void> main() async {
 
   if (!kIsWeb) {
     await Firebase.initializeApp();
-    await AnalyticsService.initialize();
-    await MobileAds.instance.initialize();
-  }
 
-  await DailyNotificationService.initialize();
+    await AnalyticsService.initialize();
+
+    await MobileAds.instance.initialize();
+
+    await DailyNotificationService.initialize();
+
+    await OwnerAnalyticsService.initialize();
+  }
 
   runApp(
     const BrainAgeDailyApp(),
   );
 }
 
-class BrainAgeDailyApp extends StatefulWidget {
+class BrainAgeDailyApp
+    extends StatefulWidget {
   const BrainAgeDailyApp({
     super.key,
   });
@@ -35,18 +42,65 @@ class BrainAgeDailyApp extends StatefulWidget {
 }
 
 class _BrainAgeDailyAppState
-    extends State<BrainAgeDailyApp> {
-  bool _notificationSetupStarted = false;
+    extends State<BrainAgeDailyApp>
+    with WidgetsBindingObserver {
+  bool _notificationSetupStarted =
+      false;
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback(
+    WidgetsBinding.instance.addObserver(
+      this,
+    );
+
+    WidgetsBinding.instance
+        .addPostFrameCallback(
       (_) {
         _setupNotifications();
       },
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(
+      this,
+    );
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state ==
+        AppLifecycleState.resumed) {
+      AnalyticsService.appForegrounded();
+
+      DailyNotificationService
+          .rescheduleDailyReminder();
+
+      OwnerAnalyticsService
+          .resumeSession();
+    }
+
+    if (state ==
+            AppLifecycleState.paused ||
+        state ==
+            AppLifecycleState.detached ||
+        state ==
+            AppLifecycleState.hidden) {
+      AnalyticsService.appBackgrounded();
+
+      DailyNotificationService
+          .rescheduleDailyReminder();
+
+      OwnerAnalyticsService
+          .pauseSession();
+    }
   }
 
   Future<void> _setupNotifications() async {
@@ -60,49 +114,32 @@ class _BrainAgeDailyAppState
       return;
     }
 
-    /*
-     * Check whether notifications have already
-     * been enabled through the app.
-     *
-     * If they have, simply make sure the two
-     * daily reminders are scheduled.
-     *
-     * If they have not, request Apple's
-     * notification permission.
-     *
-     * When Apple permission is accepted,
-     * requestPermissionAndSchedule() automatically
-     * saves the notification toggle as ON.
-     */
-    final bool alreadyEnabled =
-        await DailyNotificationService
-            .notificationsEnabled();
-
-    if (alreadyEnabled) {
-      await DailyNotificationService
-          .scheduleDailyReminder();
-
-      return;
-    }
-
     await DailyNotificationService
         .requestPermissionAndSchedule();
+
+    await OwnerAnalyticsService
+        .refreshDeviceToken();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return MaterialApp(
       title: 'Brain Age Daily',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner:
+          false,
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Arial',
       ),
-      navigatorObservers: kIsWeb
-          ? const <NavigatorObserver>[]
-          : <NavigatorObserver>[
-              FirebaseAnalyticsObserver(analytics: AnalyticsService.analytics),
-            ],
+      navigatorObservers: [
+        if (!kIsWeb)
+          FirebaseAnalyticsObserver(
+            analytics:
+                FirebaseAnalytics.instance,
+          ),
+      ],
       home: const HomePage(),
     );
   }

@@ -8,10 +8,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/game_ids.dart';
 import '../../core/models/daily_session_result.dart';
 import '../../core/models/game_result.dart';
+
 import '../../core/services/admob_service.dart';
-import '../../core/services/brain_age_service.dart';
 import '../../core/services/analytics_service.dart';
+import '../../core/services/brain_age_service.dart';
+import '../../core/services/daily_notification_service.dart';
+import '../../core/services/daily_progress_service.dart';
 import '../../core/services/stats_service.dart';
+
 import '../../core/widgets/app_interstitial_ad.dart';
 import '../../core/widgets/app_rewarded_ad.dart';
 
@@ -42,23 +46,20 @@ class DailyPage extends StatefulWidget {
 }
 
 class _DailyPageState extends State<DailyPage> {
-  static const int secondsPerGame = 25;
+  static const int secondsPerGame = 40;
   static const int maxHearts = 3;
 
   static const String _heartsKey = 'daily_hearts';
-
-  static const String _lastHeartRegenKey =
-      'daily_last_heart_regen_ms';
+  static const String _lastHeartRegenKey = 'daily_last_heart_regen_ms';
 
   final DailyEngine _engine = DailyEngine();
   final Random _random = Random();
 
   late final List<String> _games;
+  late final DateTime _dailyStartedAt;
 
   final List<GameResult> _results = <GameResult>[];
-
-  final List<QuestionResult> _questionResults =
-      <QuestionResult>[];
+  final List<QuestionResult> _questionResults = <QuestionResult>[];
 
   int _gameIndex = 0;
   int _timeLeft = secondsPerGame;
@@ -66,6 +67,9 @@ class _DailyPageState extends State<DailyPage> {
   int _correct = 0;
   int _attempts = 0;
   int _heartsLeft = maxHearts;
+
+  bool _dailyFinished = false;
+  bool _finishingGame = false;
 
   Timer? _timer;
 
@@ -78,42 +82,61 @@ class _DailyPageState extends State<DailyPage> {
 
   bool _orderRecallShowingSequence = false;
   String _orderRecallInput = '';
-
   List<String> _orderRecallAnswerSequence = <String>[];
-
   List<String> _orderRecallSelectedSequence = <String>[];
-
   List<String> _orderRecallSelectableOptions = <String>[];
 
   bool _memoryGridShowingPattern = false;
-
   List<int> _memoryGridPattern = <int>[];
-
   final Set<int> _memoryGridSelected = <int>{};
-
-  bool _finishingGame = false;
 
   @override
   void initState() {
     super.initState();
 
+    _dailyStartedAt = DateTime.now();
     _games = _engine.getTodayGames();
-    AnalyticsService.dailyStarted(gameCount: _games.length);
 
     AdMobService.initialize();
-
-    // Preload the interstitial for after game 3.
     AppInterstitialAd.load();
-
     AppRewardedAd.load();
 
-    _loadHearts();
     _startGame();
+    _initialiseDailyTracking();
+  }
+
+  Future<void> _initialiseDailyTracking() async {
+    await _loadHearts();
+
+    await DailyProgressService.markStarted();
+
+    await AnalyticsService.dailyChallengeStarted(
+      games: _games.length,
+      heartsRemaining: _heartsLeft,
+    );
+
+    await AnalyticsService.screen('daily_challenge');
+
+    await DailyNotificationService.rescheduleDailyReminder();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+
+    if (!_dailyFinished) {
+      final int secondsPlayed =
+          DateTime.now().difference(_dailyStartedAt).inSeconds;
+
+      AnalyticsService.dailyChallengeAbandoned(
+        gamesCompleted: _results.length,
+        currentGame: _gameIndex + 1,
+        secondsPlayed: secondsPlayed,
+      );
+
+      DailyNotificationService.rescheduleDailyReminder();
+    }
+
     super.dispose();
   }
 
@@ -131,16 +154,13 @@ class _DailyPageState extends State<DailyPage> {
     final SharedPreferences prefs =
         await SharedPreferences.getInstance();
 
-    int hearts =
-        prefs.getInt(_heartsKey) ?? maxHearts;
+    int hearts = prefs.getInt(_heartsKey) ?? maxHearts;
 
     final int nowMs =
         DateTime.now().millisecondsSinceEpoch;
 
     final int? lastRegenMs =
-        prefs.getInt(
-      _lastHeartRegenKey,
-    );
+        prefs.getInt(_lastHeartRegenKey);
 
     if (lastRegenMs == null) {
       await prefs.setInt(
@@ -148,8 +168,7 @@ class _DailyPageState extends State<DailyPage> {
         nowMs,
       );
     } else if (hearts < maxHearts) {
-      final int elapsedMs =
-          nowMs - lastRegenMs;
+      final int elapsedMs = nowMs - lastRegenMs;
 
       final int daysPassed =
           elapsedMs ~/
@@ -166,12 +185,10 @@ class _DailyPageState extends State<DailyPage> {
 
         final int newLastRegenMs =
             lastRegenMs +
-                (
-                  daysPassed *
-                      const Duration(
-                        hours: 24,
-                      ).inMilliseconds
-                );
+                (daysPassed *
+                    const Duration(
+                      hours: 24,
+                    ).inMilliseconds);
 
         await prefs.setInt(
           _heartsKey,
@@ -188,13 +205,10 @@ class _DailyPageState extends State<DailyPage> {
     if (!mounted) return;
 
     setState(() {
-      _heartsLeft =
-          hearts
-              .clamp(
-                0,
-                maxHearts,
-              )
-              .toInt();
+      _heartsLeft = hearts.clamp(
+        0,
+        maxHearts,
+      ).toInt();
     });
   }
 
@@ -202,22 +216,22 @@ class _DailyPageState extends State<DailyPage> {
     int hearts,
   ) async {
     if (kIsWeb) {
+      if (!mounted) return;
+
       setState(() {
         _heartsLeft = maxHearts;
       });
+
       return;
     }
 
     final SharedPreferences prefs =
         await SharedPreferences.getInstance();
 
-    final int safeHearts =
-        hearts
-            .clamp(
-              0,
-              maxHearts,
-            )
-            .toInt();
+    final int safeHearts = hearts.clamp(
+      0,
+      maxHearts,
+    ).toInt();
 
     await prefs.setInt(
       _heartsKey,
@@ -243,8 +257,10 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
+    await AnalyticsService.heartRewardedAdStarted();
+
     final bool earnedReward =
-        await AppRewardedAd.show(placement: 'daily_heart');
+        await AppRewardedAd.show();
 
     if (!mounted) return;
 
@@ -257,28 +273,28 @@ class _DailyPageState extends State<DailyPage> {
               )
               .toInt();
 
-      await _saveHearts(
-        newHearts,
-      );
+      await _saveHearts(newHearts);
+
+      await AnalyticsService.heartRewardedAdCompleted();
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            '❤️ +1 Heart',
-          ),
+          content: Text('❤️ +1 Heart'),
           duration: Duration(
             milliseconds: 900,
           ),
         ),
       );
     } else {
+      await AnalyticsService.heartRewardFailed();
+
       AppRewardedAd.load();
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
             'Ad not ready yet. Try again soon.',
@@ -292,12 +308,17 @@ class _DailyPageState extends State<DailyPage> {
   }
 
   void _startGame() {
-    AnalyticsService.dailyGameStarted(_games[_gameIndex], _gameIndex + 1);
+    _finishingGame = false;
+
     _score = 0;
     _correct = 0;
     _attempts = 0;
     _timeLeft = secondsPerGame;
-    _finishingGame = false;
+
+    AnalyticsService.dailyGameStarted(
+      gameId: _games[_gameIndex],
+      position: _gameIndex + 1,
+    );
 
     _nextQuestion();
 
@@ -326,39 +347,30 @@ class _DailyPageState extends State<DailyPage> {
 
     _orderRecallShowingSequence = false;
     _orderRecallInput = '';
-
     _orderRecallAnswerSequence = <String>[];
-
     _orderRecallSelectedSequence = <String>[];
-
     _orderRecallSelectableOptions = <String>[];
 
     _memoryGridShowingPattern = false;
-
     _memoryGridPattern = <int>[];
-
     _memoryGridSelected.clear();
   }
 
   void _nextQuestion() {
-    final String game =
-        _games[_gameIndex];
+    final String game = _games[_gameIndex];
 
     _resetSpecialGameState();
 
     if (game == GameIds.quickMath) {
       final QuickMathQuestion q =
           QuickMathQuestions.all[
-            _random.nextInt(
-              QuickMathQuestions.all.length,
-            )
+              _random.nextInt(
+                QuickMathQuestions.all.length,
+              )
           ];
 
-      _instruction =
-          'Solve as fast as you can';
-
+      _instruction = 'Solve as fast as you can';
       _question = q.text;
-
       _answer = '${q.answer}';
 
       _options = <String>[
@@ -375,26 +387,21 @@ class _DailyPageState extends State<DailyPage> {
       }
 
       _options.shuffle(_random);
+
       return;
     }
 
     if (game == GameIds.timeDifference) {
       final TimeDifferenceQuestion q =
           TimeDifferenceQuestions.all[
-            _random.nextInt(
-              TimeDifferenceQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                TimeDifferenceQuestions.all.length,
+              )
           ];
 
-      _instruction =
-          'How many minutes elapsed?';
-
-      _question =
-          '${q.from} → ${q.to}';
-
-      _answer =
-          '${q.minutes}';
+      _instruction = 'How many minutes elapsed?';
+      _question = '${q.from} → ${q.to}';
+      _answer = '${q.minutes}';
 
       _options = <String>[
         '${q.minutes}',
@@ -417,15 +424,16 @@ class _DailyPageState extends State<DailyPage> {
       }
 
       _options.shuffle(_random);
+
       return;
     }
 
     if (game == GameIds.antonyms) {
       final AntonymQuestion q =
           AntonymQuestions.all[
-            _random.nextInt(
-              AntonymQuestions.all.length,
-            )
+              _random.nextInt(
+                AntonymQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -433,8 +441,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.word;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -446,10 +453,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.scienceQuiz) {
       final ScienceQuizQuestion q =
           ScienceQuizQuestions.all[
-            _random.nextInt(
-              ScienceQuizQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                ScienceQuizQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -457,8 +463,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.question;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -470,10 +475,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.biologyQuiz) {
       final BiologyQuizQuestion q =
           BiologyQuizQuestions.all[
-            _random.nextInt(
-              BiologyQuizQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                BiologyQuizQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -481,8 +485,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.question;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -494,10 +497,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.wordSnap) {
       final WordSnapQuestion q =
           WordSnapQuestions.all[
-            _random.nextInt(
-              WordSnapQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                WordSnapQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -505,8 +507,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.word;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -518,10 +519,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.wordScramble) {
       final WordScrambleQuestion q =
           WordScrambleQuestions.all[
-            _random.nextInt(
-              WordScrambleQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                WordScrambleQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -529,8 +529,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.scrambled;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -547,23 +546,21 @@ class _DailyPageState extends State<DailyPage> {
 
       _instruction = q.instruction;
 
-      _question =
-          q.grid.join('   ');
+      _question = q.grid.join(
+        '   ',
+      );
 
       _options =
-          FocusCountQuestions
-              .optionsFor(
-                q,
-                _random,
-              )
+          FocusCountQuestions.optionsFor(
+        q,
+        _random,
+      )
               .map(
-                (value) =>
-                    value.toString(),
+                (value) => value.toString(),
               )
               .toList();
 
-      _answer =
-          q.answer.toString();
+      _answer = q.answer.toString();
 
       return;
     }
@@ -571,10 +568,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.stroopShift) {
       final StroopShiftQuestion q =
           StroopShiftQuestions.all[
-            _random.nextInt(
-              StroopShiftQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                StroopShiftQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -587,8 +583,7 @@ class _DailyPageState extends State<DailyPage> {
         q.inkColour,
       );
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -600,10 +595,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.reactionSwitch) {
       final ReactionSwitchQuestion q =
           ReactionSwitchQuestions.all[
-            _random.nextInt(
-              ReactionSwitchQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                ReactionSwitchQuestions.all.length,
+              )
           ];
 
       _instruction = q.prompt;
@@ -622,9 +616,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.sudoku) {
       final SudokuQuestion q =
           SudokuQuestions.all[
-            _random.nextInt(
-              SudokuQuestions.all.length,
-            )
+              _random.nextInt(
+                SudokuQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -632,8 +626,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.row;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -645,10 +638,9 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.symbolMatch) {
       final SymbolMatchQuestion q =
           SymbolMatchQuestions.all[
-            _random.nextInt(
-              SymbolMatchQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                SymbolMatchQuestions.all.length,
+              )
           ];
 
       _instruction =
@@ -656,8 +648,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = q.target;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -670,13 +661,10 @@ class _DailyPageState extends State<DailyPage> {
       final PatternLogicQuestion q =
           PatternLogicQuestion.generate();
 
-      _instruction =
-          'What comes next?';
-
+      _instruction = 'What comes next?';
       _question = q.sequence;
 
-      _options =
-          List<String>.from(
+      _options = List<String>.from(
         q.options,
       )..shuffle(_random);
 
@@ -688,21 +676,17 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.memoryGrid) {
       final MemoryGridQuestion q =
           MemoryGridQuestions.all[
-            _random.nextInt(
-              MemoryGridQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                MemoryGridQuestions.all.length,
+              )
           ];
 
       _instruction =
           'Remember the highlighted squares';
 
       _question = '';
-
       _options = <String>[];
-
-      _answer =
-          q.pattern.join(',');
+      _answer = q.pattern.join(',');
 
       _memoryGridPattern =
           List<int>.from(
@@ -718,7 +702,9 @@ class _DailyPageState extends State<DailyPage> {
           milliseconds: 1300,
         ),
         () {
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
 
           if (_games[_gameIndex] !=
               GameIds.memoryGrid) {
@@ -741,17 +727,17 @@ class _DailyPageState extends State<DailyPage> {
     if (game == GameIds.orderRecall) {
       final OrderRecallQuestion q =
           OrderRecallQuestions.all[
-            _random.nextInt(
-              OrderRecallQuestions
-                  .all.length,
-            )
+              _random.nextInt(
+                OrderRecallQuestions.all.length,
+              )
           ];
 
       _instruction =
           'Remember the order';
 
-      _question =
-          q.shown.join('   ');
+      _question = q.shown.join(
+        '   ',
+      );
 
       _orderRecallAnswerSequence =
           q.answer
@@ -768,30 +754,32 @@ class _DailyPageState extends State<DailyPage> {
                     number.toString(),
               )
               .toList()
-            ..shuffle(_random);
+            ..shuffle(
+              _random,
+            );
 
       _orderRecallSelectedSequence =
           <String>[];
 
       _orderRecallInput = '';
 
-      _options = <String>['OK'];
+      _options = <String>[
+        'OK',
+      ];
 
       _answer =
-          _orderRecallAnswerSequence
-              .join('|');
+          _orderRecallAnswerSequence.join(
+        '|',
+      );
 
-      _orderRecallShowingSequence =
-          true;
+      _orderRecallShowingSequence = true;
 
       return;
     }
 
     _instruction = 'Ready?';
     _question = 'Ready?';
-
     _options = <String>['OK'];
-
     _answer = 'OK';
   }
 
@@ -852,8 +840,9 @@ class _DailyPageState extends State<DailyPage> {
               16,
             ),
           ),
-          margin:
-              const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(
+            16,
+          ),
         ),
       );
   }
@@ -870,21 +859,41 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (_memoryGridSelected
-        .contains(index)) {
+    if (_memoryGridSelected.contains(
+      index,
+    )) {
       return;
     }
 
     setState(() {
-      _memoryGridSelected.add(index);
+      _memoryGridSelected.add(
+        index,
+      );
     });
 
     final bool correctTile =
-        _memoryGridPattern
-            .contains(index);
+        _memoryGridPattern.contains(
+      index,
+    );
 
     if (!correctTile) {
       _attempts++;
+
+      _questionResults.add(
+        QuestionResult(
+          gameId:
+              _games[_gameIndex],
+          question:
+              'Remember the highlighted squares',
+          userAnswer:
+              index.toString(),
+          correctAnswer:
+              _memoryGridPattern.join(
+            ', ',
+          ),
+          isCorrect: false,
+        ),
+      );
 
       _showResultToast(false);
 
@@ -900,11 +909,31 @@ class _DailyPageState extends State<DailyPage> {
       _memoryGridSelected.contains,
     );
 
-    if (!completed) return;
+    if (!completed) {
+      return;
+    }
 
     _attempts++;
     _correct++;
     _score++;
+
+    _questionResults.add(
+      QuestionResult(
+        gameId:
+            _games[_gameIndex],
+        question:
+            'Remember the highlighted squares',
+        userAnswer:
+            _memoryGridSelected.join(
+          ', ',
+        ),
+        correctAnswer:
+            _memoryGridPattern.join(
+          ', ',
+        ),
+        isCorrect: true,
+      ),
+    );
 
     _showResultToast(true);
 
@@ -951,22 +980,28 @@ class _DailyPageState extends State<DailyPage> {
       }
 
       if (_orderRecallSelectedSequence
-          .contains(selected)) {
+          .contains(
+        selected,
+      )) {
         return;
       }
 
       if (!_orderRecallSelectableOptions
-          .contains(selected)) {
+          .contains(
+        selected,
+      )) {
         return;
       }
 
       setState(() {
-        _orderRecallSelectedSequence
-            .add(selected);
+        _orderRecallSelectedSequence.add(
+          selected,
+        );
 
         _orderRecallInput =
-            _orderRecallSelectedSequence
-                .join('   ');
+            _orderRecallSelectedSequence.join(
+          '   ',
+        );
 
         _options =
             _orderRecallSelectableOptions
@@ -991,15 +1026,15 @@ class _DailyPageState extends State<DailyPage> {
 
       bool correct = true;
 
-      for (
-        int i = 0;
-        i <
-            _orderRecallAnswerSequence
-                .length;
-        i++
-      ) {
-        if (_orderRecallSelectedSequence[i] !=
-            _orderRecallAnswerSequence[i]) {
+      for (int i = 0;
+          i <
+              _orderRecallAnswerSequence
+                  .length;
+          i++) {
+        if (_orderRecallSelectedSequence[
+                i] !=
+            _orderRecallAnswerSequence[
+                i]) {
           correct = false;
           break;
         }
@@ -1013,10 +1048,14 @@ class _DailyPageState extends State<DailyPage> {
               'Repeat the sequence',
           userAnswer:
               _orderRecallSelectedSequence
-                  .join(', '),
+                  .join(
+            ', ',
+          ),
           correctAnswer:
               _orderRecallAnswerSequence
-                  .join(', '),
+                  .join(
+            ', ',
+          ),
           isCorrect: correct,
         ),
       );
@@ -1033,7 +1072,9 @@ class _DailyPageState extends State<DailyPage> {
           milliseconds: 450,
         ),
         () {
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
 
           setState(() {
             _nextQuestion();
@@ -1073,23 +1114,23 @@ class _DailyPageState extends State<DailyPage> {
   }
 
   Future<void> _finishGame() async {
-    if (_finishingGame) return;
+    if (_finishingGame) {
+      return;
+    }
 
     _finishingGame = true;
 
     _timer?.cancel();
 
+    final int durationSeconds =
+        (secondsPerGame - _timeLeft)
+            .clamp(
+              1,
+              secondsPerGame,
+            );
+
     final double elapsedMs =
-        (
-          (
-            secondsPerGame -
-                _timeLeft
-          ).clamp(
-            1,
-            secondsPerGame,
-          ) *
-              1000.0
-        );
+        durationSeconds * 1000.0;
 
     final double averageResponseTimeMs =
         max(
@@ -1101,13 +1142,16 @@ class _DailyPageState extends State<DailyPage> {
           ),
     );
 
-    AnalyticsService.dailyGameCompleted(
-      gameId: _games[_gameIndex],
-      position: _gameIndex + 1,
+    await AnalyticsService.dailyGameCompleted(
+      gameId:
+          _games[_gameIndex],
+      position:
+          _gameIndex + 1,
       score: _score,
       correct: _correct,
       attempts: _attempts,
-      durationSeconds: (secondsPerGame - _timeLeft).clamp(1, secondsPerGame),
+      durationSeconds:
+          durationSeconds,
     );
 
     _results.add(
@@ -1119,8 +1163,7 @@ class _DailyPageState extends State<DailyPage> {
         attempts: _attempts,
         averageResponseTimeMs:
             averageResponseTimeMs,
-        playedAt:
-            DateTime.now(),
+        playedAt: DateTime.now(),
         questionResults:
             _questionResults
                 .where(
@@ -1132,33 +1175,13 @@ class _DailyPageState extends State<DailyPage> {
       ),
     );
 
-    /*
-     * GAME 3 HAS JUST FINISHED.
-     *
-     * _gameIndex starts at 0, so:
-     *
-     * 0 = game 1
-     * 1 = game 2
-     * 2 = game 3
-     *
-     * Show an interstitial before game 4.
-     */
-    if (_gameIndex == 2) {
-      await AppInterstitialAd.show(
-        context,
-        placement: 'daily_after_game_3',
-      );
+    await DailyProgressService
+        .setGamesCompleted(
+      _results.length,
+    );
 
-      if (!mounted) return;
-
-      /*
-       * The game-3 ad has now been used.
-       * Preload another interstitial so it
-       * is ready when the user finishes all
-       * five games and presses Home.
-       */
-      AppInterstitialAd.load();
-    }
+    await DailyNotificationService
+        .rescheduleDailyReminder();
 
     if (_gameIndex >=
         _games.length - 1) {
@@ -1166,7 +1189,17 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
-    if (!mounted) return;
+    if (_gameIndex == 2) {
+      if (!mounted) return;
+
+      await AppInterstitialAd.show(
+        context,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _gameIndex++;
@@ -1234,7 +1267,10 @@ class _DailyPageState extends State<DailyPage> {
             .getInstance();
 
     final int userAge =
-        prefs.getInt('user_age') ?? 25;
+        prefs.getInt(
+              'user_age',
+            ) ??
+            25;
 
     final int brainAge =
         BrainAgeService.calculate(
@@ -1242,344 +1278,94 @@ class _DailyPageState extends State<DailyPage> {
       responseTime:
           averageResponseTime,
       score: totalScore,
-      chronologicalAge: userAge,
+      chronologicalAge:
+          userAge,
     );
 
-    await AnalyticsService.dailyCompleted(
+    final int dailyDurationSeconds =
+        DateTime.now()
+            .difference(
+              _dailyStartedAt,
+            )
+            .inSeconds;
+
+    await AnalyticsService.brainAgeCalculated(
       brainAge: brainAge,
-      chronologicalAge: userAge,
-      score: totalScore,
-      correct: totalCorrect,
-      attempts: totalAttempts,
+      chronologicalAge:
+          userAge,
     );
 
     await StatsService.saveDailySession(
       DailySessionResult(
         gameResults: _results,
         brainAge: brainAge,
-        completedAt: DateTime.now(),
+        completedAt:
+            DateTime.now(),
       ),
     );
 
-    if (!mounted) return;
+    _dailyFinished = true;
+
+    await DailyProgressService.markCompleted();
+
+    await AnalyticsService.dailyChallengeCompleted(
+      brainAge: brainAge,
+      chronologicalAge:
+          userAge,
+      score: totalScore,
+      correct: totalCorrect,
+      attempts: totalAttempts,
+      durationSeconds:
+          dailyDurationSeconds,
+    );
+
+    await DailyNotificationService
+        .rescheduleDailyReminder();
+
+    if (!mounted) {
+      return;
+    }
 
     await showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (
-        dialogContext,
-      ) {
-        return WillPopScope(
-          onWillPop: () async => false,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(
-                26,
-              ),
+      builder: (_) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(
+              24,
             ),
-            title: const Column(
-              children: [
-                Icon(
-                  Icons.emoji_events_rounded,
-                  color: Color(
-                    0xFFFFB92E,
-                  ),
-                  size: 46,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Daily Complete!',
-                  textAlign:
-                      TextAlign.center,
-                  style: TextStyle(
-                    fontWeight:
-                        FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const Text(
-                  'YOUR BRAIN AGE',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 13,
-                    fontWeight:
-                        FontWeight.w900,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  '$brainAge',
-                  style: const TextStyle(
-                    color:
-                        Color(0xFF202024),
-                    fontSize: 60,
-                    fontWeight:
-                        FontWeight.w900,
-                    height: 1,
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.all(
-                    14,
-                  ),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        const Color(
-                      0xFFF4F2FF,
-                    ),
-                    borderRadius:
-                        BorderRadius.circular(
-                      16,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-                        children: [
-                          const Text(
-                            'Score',
-                            style: TextStyle(
-                              color:
-                                  Colors.grey,
-                              fontWeight:
-                                  FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            '$totalScore',
-                            style:
-                                const TextStyle(
-                              color:
-                                  Color(
-                                0xFF625BEA,
-                              ),
-                              fontWeight:
-                                  FontWeight.w900,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height: 10,
-                      ),
-
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-                        children: [
-                          const Text(
-                            'Correct',
-                            style: TextStyle(
-                              color:
-                                  Colors.grey,
-                              fontWeight:
-                                  FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            '$totalCorrect / $totalAttempts',
-                            style:
-                                const TextStyle(
-                              color:
-                                  Color(
-                                0xFF625BEA,
-                              ),
-                              fontWeight:
-                                  FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height: 10,
-                      ),
-
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-                        children: [
-                          const Text(
-                            'Accuracy',
-                            style: TextStyle(
-                              color:
-                                  Colors.grey,
-                              fontWeight:
-                                  FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            '${(accuracy * 100).round()}%',
-                            style:
-                                const TextStyle(
-                              color:
-                                  Color(
-                                0xFF625BEA,
-                              ),
-                              fontWeight:
-                                  FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actionsAlignment:
-                MainAxisAlignment.center,
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child:
-                    ElevatedButton.icon(
-                  onPressed: () async {
-                    /*
-                     * The results remain visible
-                     * until the user presses Home.
-                     *
-                     * Then the second interstitial
-                     * is shown.
-                     */
-                    await AppInterstitialAd
-                        .show(context);
-
-                    if (!mounted) {
-                      return;
-                    }
-
-                    if (Navigator.of(
-                      dialogContext,
-                    ).canPop()) {
-                      Navigator.of(
-                        dialogContext,
-                      ).pop();
-                    }
-
-                    if (!mounted) {
-                      return;
-                    }
-
-                    Navigator.of(context)
-                        .pop();
-                  },
-                  icon: const Icon(
-                    Icons.home_rounded,
-                  ),
-                  label: const Text(
-                    'Home',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight:
-                          FontWeight.w900,
-                    ),
-                  ),
-                  style:
-                      ElevatedButton
-                          .styleFrom(
-                    backgroundColor:
-                        const Color(
-                      0xFF625BEA,
-                    ),
-                    foregroundColor:
-                        Colors.white,
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        16,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
+          title:
+              const Text(
+            'Daily Complete',
+          ),
+          content:
+              Text(
+            'Your Brain Age: $brainAge',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(
+                context,
+              ),
+              child:
+                  const Text(
+                'Done',
+              ),
+            ),
+          ],
         );
       },
     );
-  }
 
-  Widget _answerGrid({
-    required double answerHeight,
-    required double scale,
-  }) {
-    if (_options.isEmpty) {
-      return const SizedBox.shrink();
+    if (!mounted) {
+      return;
     }
 
-    if (_options.length == 1) {
-      return DailyAnswerButton(
-        text: _options.first,
-        onPressed: () =>
-            _tapAnswer(
-          _options.first,
-        ),
-        height: answerHeight,
-        scale: scale,
-      );
-    }
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      itemCount: _options.length,
-      gridDelegate:
-          SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing:
-            (8 * scale).clamp(
-          6.0,
-          11.0,
-        ),
-        mainAxisSpacing:
-            (8 * scale).clamp(
-          6.0,
-          11.0,
-        ),
-        mainAxisExtent: answerHeight,
-      ),
-      itemBuilder:
-          (context, index) {
-        final String option =
-            _options[index];
-
-        return DailyAnswerButton(
-          text: option,
-          onPressed: () =>
-              _tapAnswer(
-            option,
-          ),
-          height: answerHeight,
-          scale: scale,
-        );
-      },
-    );
+    Navigator.pop(context);
   }
 
   @override
@@ -1587,191 +1373,113 @@ class _DailyPageState extends State<DailyPage> {
     BuildContext context,
   ) {
     final double progress =
-        (
-          _gameIndex +
-              (
-                (
-                  secondsPerGame -
-                      _timeLeft
-                ) /
-                    secondsPerGame
-              )
-        ) /
+        (_gameIndex +
+                ((secondsPerGame -
+                        _timeLeft) /
+                    secondsPerGame)) /
             _games.length;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration:
-            const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF4B0B8F),
-              Color(0xFF6413A8),
-              Color(0xFF7C20C8),
-            ],
-            begin:
-                Alignment.topCenter,
-            end:
-                Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (
-              context,
-              constraints,
-            ) {
-              final double h =
-                  constraints.maxHeight;
+      body: LayoutBuilder(
+        builder: (
+          context,
+          constraints,
+        ) {
+          final bool compact =
+              constraints.maxHeight <
+                  760;
 
-              final double w =
-                  constraints.maxWidth;
-
-              final double widthScale =
-                  w / 390.0;
-
-              final double heightScale =
-                  h / 760.0;
-
-              final double scale =
-                  min(
-                    widthScale,
-                    heightScale,
-                  ).clamp(
-                    0.82,
-                    1.18,
-                  );
-
-              final double outerPadding =
-                  (12 * scale).clamp(
-                9.0,
-                15.0,
-              );
-
-              final double smallGap =
-                  (8 * scale).clamp(
-                6.0,
-                11.0,
-              );
-
-              final double answerHeight =
-                  (54 * scale).clamp(
-                46.0,
-                64.0,
-              );
-
-              final double statHeight =
-                  (52 * scale).clamp(
-                45.0,
-                62.0,
-              );
-
-              final int answerRows =
-                  _options.isEmpty
-                      ? 0
-                      : _options.length == 1
-                          ? 1
-                          : (_options.length / 2)
-                              .ceil();
-
-              final double answerAreaHeight =
-                  answerRows == 0
-                      ? 0
-                      : (answerRows *
-                              answerHeight) +
-                          ((answerRows - 1) *
-                              smallGap);
-
-              final double headerHeight =
-                  (46 * scale).clamp(
-                40.0,
-                54.0,
-              );
-
-              final double progressHeight =
-                  (54 * scale).clamp(
-                46.0,
-                64.0,
-              );
-
-              final double fixedHeight =
-                  outerPadding +
-                      headerHeight +
-                      smallGap +
-                      progressHeight +
-                      smallGap +
-                      answerAreaHeight +
-                      (answerRows > 0
-                          ? smallGap
-                          : 0) +
-                      statHeight +
-                      outerPadding;
-
-              final double questionHeight =
-                  (h - fixedHeight).clamp(
-                285.0,
-                520.0,
-              );
-
-              return Stack(
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration:
+                const BoxDecoration(
+              gradient:
+                  LinearGradient(
+                colors: [
+                  Color(
+                    0xFF4B0B8F,
+                  ),
+                  Color(
+                    0xFF6413A8,
+                  ),
+                  Color(
+                    0xFF7C20C8,
+                  ),
+                ],
+                begin:
+                    Alignment.topCenter,
+                end:
+                    Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
                 children: [
                   const DailySparklesBackground(),
-
-                  Padding(
+                  SingleChildScrollView(
                     padding:
                         EdgeInsets.fromLTRB(
-                      outerPadding,
-                      outerPadding,
-                      outerPadding,
-                      outerPadding,
+                      18,
+                      compact ? 10 : 16,
+                      18,
+                      compact ? 14 : 20,
                     ),
-                    child: Column(
-                      children: [
-                        DailyHeader(
-                          onBack: () =>
-                              Navigator.pop(
-                            context,
+                    child:
+                        ConstrainedBox(
+                      constraints:
+                          BoxConstraints(
+                        minHeight:
+                            constraints
+                                    .maxHeight -
+                                MediaQuery.of(
+                                  context,
+                                ).padding.top -
+                                MediaQuery.of(
+                                  context,
+                                ).padding.bottom -
+                                30,
+                      ),
+                      child: Column(
+                        children: [
+                          DailyHeader(
+                            onBack: () =>
+                                Navigator.pop(
+                              context,
+                            ),
+                            heartsLeft:
+                                _heartsLeft,
+                            onWatchAdForHeart:
+                                _heartsLeft <
+                                        maxHearts
+                                    ? _watchAdForHeart
+                                    : null,
                           ),
-                          heartsLeft:
-                              _heartsLeft,
-                          onWatchAdForHeart:
-                              _heartsLeft <
-                                      maxHearts
-                                  ? _watchAdForHeart
-                                  : null,
-                          scale: scale,
-                        ),
-
-                        SizedBox(
-                          height: smallGap,
-                        ),
-
-                        DailyStepProgress(
-                          gamesCount:
-                              _games.length,
-                          activeIndex:
-                              _gameIndex,
-                          progress:
-                              progress,
-                          scale: scale,
-                        ),
-
-                        SizedBox(
-                          height: smallGap,
-                        ),
-
-                        SizedBox(
-                          height:
-                              questionHeight,
-                          child:
-                              DailyQuestionCard(
+                          SizedBox(
+                            height:
+                                compact
+                                    ? 18
+                                    : 24,
+                          ),
+                          DailyStepProgress(
+                            gamesCount:
+                                _games.length,
+                            activeIndex:
+                                _gameIndex,
+                            progress:
+                                progress,
+                          ),
+                          SizedBox(
+                            height:
+                                compact
+                                    ? 28
+                                    : 38,
+                          ),
+                          DailyQuestionCard(
                             title:
                                 GameIds.label(
                               _games[
-                                _gameIndex
-                              ],
+                                  _gameIndex],
                             ),
                             instruction:
                                 _instruction,
@@ -1791,77 +1499,65 @@ class _DailyPageState extends State<DailyPage> {
                                 _memoryGridShowingPattern,
                             onMemoryGridTap:
                                 _tapMemoryGridTile,
-                            scale:
-                                scale,
                           ),
-                        ),
-
-                        if (answerRows > 0)
                           SizedBox(
                             height:
-                                smallGap,
+                                compact
+                                    ? 22
+                                    : 30,
                           ),
-
-                        _answerGrid(
-                          answerHeight:
-                              answerHeight,
-                          scale:
-                              scale,
-                        ),
-
-                        SizedBox(
-                          height:
-                              smallGap,
-                        ),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child:
-                                  DailyBottomStatCard(
-                                icon:
-                                    '🏆',
-                                label:
-                                    'Score',
-                                value:
-                                    '$_score',
-                                height:
-                                    statHeight,
-                                scale:
-                                    scale,
-                              ),
-                            ),
-
-                            SizedBox(
-                              width:
-                                  smallGap,
-                            ),
-
-                            Expanded(
-                              child:
-                                  DailyBottomStatCard(
-                                icon:
-                                    '✅',
-                                label:
-                                    'Correct',
-                                value:
-                                    '$_correct',
-                                height:
-                                    statHeight,
-                                scale:
-                                    scale,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ..._options.map(
+                            (option) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.only(
+                                  bottom: 12,
+                                ),
+                                child:
+                                    DailyAnswerButton(
+                                  text:
+                                      option,
+                                  onPressed:
+                                      () =>
+                                          _tapAnswer(
+                                    option,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          SizedBox(
+                            height:
+                                compact
+                                    ? 10
+                                    : 18,
+                          ),
+                          DailyBottomStatCard(
+                            icon: '🏆',
+                            label:
+                                'Score',
+                            value:
+                                '$_score',
+                          ),
+                          const SizedBox(
+                            height: 12,
+                          ),
+                          DailyBottomStatCard(
+                            icon: '✅',
+                            label:
+                                'Correct',
+                            value:
+                                '$_correct',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

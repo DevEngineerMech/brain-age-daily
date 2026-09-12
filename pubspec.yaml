@@ -2,7 +2,7 @@ name: brainagedaily
 description: Brain Age Daily App
 publish_to: 'none'
 
-version: 1.0.23+1
+version: 1.0.23+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -21,6 +21,9 @@ dependencies:
   flutter_local_notifications: ^17.2.4
   timezone: ^0.9.4
   flutter_timezone: ^2.1.0
+  cloud_firestore: ^6.9.0
+  firebase_auth: ^6.6.1
+  firebase_messaging: ^16.6.0
 
 dev_dependencies:
   flutter_test:
