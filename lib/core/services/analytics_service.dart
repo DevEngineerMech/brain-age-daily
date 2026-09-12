@@ -13,22 +13,22 @@ class AnalyticsService {
   static bool _initialized = false;
 
   static Future<void> initialize() async {
-    if (_initialized) return;
+  if (_initialized) return;
 
-    _initialized = true;
+  await analytics.setAnalyticsCollectionEnabled(true);
 
-    await analytics.setAnalyticsCollectionEnabled(true);
+  _foregroundStartedAt = DateTime.now();
+  _appSessionStartedAt = DateTime.now();
 
-    _foregroundStartedAt = DateTime.now();
-    _appSessionStartedAt = DateTime.now();
+  await _log(
+    'app_session_started',
+    {
+      'source': 'app_launch',
+    },
+  );
 
-    await _log(
-      'app_session_started',
-      {
-        'source': 'app_launch',
-      },
-    );
-  }
+  _initialized = true;
+}
 
   static Future<void> _log(
     String name, [

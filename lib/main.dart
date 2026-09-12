@@ -4,32 +4,44 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'core/services/analytics_service.dart';
 import 'core/services/daily_notification_service.dart';
 import 'features/home/home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase
+  // ------------------------------------------------------------
+  // FIREBASE
+  // ------------------------------------------------------------
+
   await Firebase.initializeApp();
 
-  // Make sure Analytics collection is enabled.
-  await FirebaseAnalytics.instance
-      .setAnalyticsCollectionEnabled(true);
+  // IMPORTANT:
+  // Initialise our AnalyticsService after Firebase.
+  await AnalyticsService.initialize();
 
-  // Explicit launch event so we can confirm Firebase
-  // is receiving data from TestFlight builds.
-  await FirebaseAnalytics.instance.logEvent(
+  // Extra launch event so we can easily confirm
+  // that this build is reaching Firebase.
+  await AnalyticsService.analytics.logEvent(
     name: 'app_started',
+    parameters: {
+      'source': 'main',
+    },
   );
 
-  // AdMob
+  // ------------------------------------------------------------
+  // ADMOB
+  // ------------------------------------------------------------
+
   if (!kIsWeb) {
     await MobileAds.instance.initialize();
   }
 
-  // Local notifications only.
-  // This is NOT the old owner notification system.
+  // ------------------------------------------------------------
+  // LOCAL NOTIFICATIONS
+  // ------------------------------------------------------------
+
   if (!kIsWeb) {
     await DailyNotificationService.initialize();
   }
@@ -52,9 +64,6 @@ class BrainAgeDailyApp extends StatefulWidget {
 class _BrainAgeDailyAppState
     extends State<BrainAgeDailyApp>
     with WidgetsBindingObserver {
-  final FirebaseAnalytics _analytics =
-      FirebaseAnalytics.instance;
-
   bool _notificationSetupStarted = false;
 
   @override
@@ -71,13 +80,12 @@ class _BrainAgeDailyAppState
   }
 
   Future<void> _afterFirstFrame() async {
-    // Log the initial home screen.
-    await _analytics.logScreenView(
-      screenName: 'home',
-      screenClass: 'HomePage',
+    // Track the home screen.
+    await AnalyticsService.screen(
+      'home',
     );
 
-    // Set up the normal user-facing daily reminders.
+    // Normal user-facing 10am / 6pm reminders.
     if (!kIsWeb) {
       await _setupNotifications();
     }
@@ -98,16 +106,19 @@ class _BrainAgeDailyAppState
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
-    if (state == AppLifecycleState.resumed) {
-      _analytics.logEvent(
-        name: 'app_foregrounded',
-      );
-    }
+    switch (state) {
+      case AppLifecycleState.resumed:
+        AnalyticsService.appForegrounded();
+        break;
 
-    if (state == AppLifecycleState.paused) {
-      _analytics.logEvent(
-        name: 'app_backgrounded',
-      );
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        AnalyticsService.appBackgrounded();
+        break;
+
+      case AppLifecycleState.inactive:
+        break;
     }
   }
 
@@ -128,7 +139,8 @@ class _BrainAgeDailyAppState
 
       navigatorObservers: [
         FirebaseAnalyticsObserver(
-          analytics: _analytics,
+          analytics:
+              AnalyticsService.analytics,
         ),
       ],
 
