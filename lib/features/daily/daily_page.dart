@@ -46,11 +46,14 @@ class DailyPage extends StatefulWidget {
 }
 
 class _DailyPageState extends State<DailyPage> {
-  static const int secondsPerGame = 40;
+  // 25 SECONDS PER GAME
+  static const int secondsPerGame = 25;
+
   static const int maxHearts = 3;
 
   static const String _heartsKey = 'daily_hearts';
-  static const String _lastHeartRegenKey = 'daily_last_heart_regen_ms';
+  static const String _lastHeartRegenKey =
+      'daily_last_heart_regen_ms';
 
   final DailyEngine _engine = DailyEngine();
   final Random _random = Random();
@@ -59,7 +62,8 @@ class _DailyPageState extends State<DailyPage> {
   late final DateTime _dailyStartedAt;
 
   final List<GameResult> _results = <GameResult>[];
-  final List<QuestionResult> _questionResults = <QuestionResult>[];
+  final List<QuestionResult> _questionResults =
+      <QuestionResult>[];
 
   int _gameIndex = 0;
   int _timeLeft = secondsPerGame;
@@ -746,8 +750,7 @@ class _DailyPageState extends State<DailyPage> {
 
       _question = '';
 
-      _options =
-          <String>[];
+      _options = <String>[];
 
       _answer =
           q.pattern.join(',');
@@ -1251,6 +1254,7 @@ class _DailyPageState extends State<DailyPage> {
       return;
     }
 
+    // INTERSTITIAL AFTER GAME 3
     if (_gameIndex == 2) {
       if (!mounted) return;
 
@@ -1448,6 +1452,160 @@ class _DailyPageState extends State<DailyPage> {
     Navigator.pop(context);
   }
 
+  Widget _buildAnswers(
+    bool veryCompact,
+  ) {
+    if (_options.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (_options.length == 1) {
+      return SizedBox(
+        height: veryCompact ? 48 : 56,
+        child: DailyAnswerButton(
+          text: _options.first,
+          onPressed: () =>
+              _tapAnswer(
+            _options.first,
+          ),
+        ),
+      );
+    }
+
+    if (_options.length == 2) {
+      return SizedBox(
+        height: veryCompact ? 50 : 58,
+        child: Row(
+          children: [
+            Expanded(
+              child: DailyAnswerButton(
+                text: _options[0],
+                onPressed: () =>
+                    _tapAnswer(
+                  _options[0],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DailyAnswerButton(
+                text: _options[1],
+                onPressed: () =>
+                    _tapAnswer(
+                  _options[1],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final int rows =
+        (_options.length / 2).ceil();
+
+    final double buttonHeight =
+        veryCompact ? 48 : 54;
+
+    final double totalHeight =
+        (rows * buttonHeight) +
+            ((rows - 1) * 8);
+
+    return SizedBox(
+      height: totalHeight,
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        physics:
+            const NeverScrollableScrollPhysics(),
+        itemCount: _options.length,
+        gridDelegate:
+            SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          mainAxisExtent:
+              buttonHeight,
+        ),
+        itemBuilder: (
+          context,
+          index,
+        ) {
+          final String option =
+              _options[index];
+
+          return DailyAnswerButton(
+            text: option,
+            onPressed: () =>
+                _tapAnswer(
+              option,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMiniStats() {
+    return Container(
+      height: 38,
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 14,
+      ),
+      decoration: BoxDecoration(
+        color:
+            Colors.white.withOpacity(
+          0.10,
+        ),
+        borderRadius:
+            BorderRadius.circular(14),
+        border: Border.all(
+          color:
+              Colors.white.withOpacity(
+            0.18,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text(
+            '🏆',
+            style: TextStyle(
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'Score $_score',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight:
+                  FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            '✅',
+            style: TextStyle(
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'Correct $_correct',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight:
+                  FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -1467,7 +1625,11 @@ class _DailyPageState extends State<DailyPage> {
         ) {
           final bool compact =
               constraints.maxHeight <
-                  760;
+                  850;
+
+          final bool veryCompact =
+              constraints.maxHeight <
+                  740;
 
           return Container(
             width: double.infinity,
@@ -1498,15 +1660,17 @@ class _DailyPageState extends State<DailyPage> {
                 children: [
                   const DailySparklesBackground(),
 
-                  SingleChildScrollView(
+                  Padding(
                     padding:
                         EdgeInsets.fromLTRB(
-                      18,
-                      compact
-                          ? 10
-                          : 16,
-                      18,
-                      24,
+                      12,
+                      veryCompact
+                          ? 4
+                          : 8,
+                      12,
+                      veryCompact
+                          ? 5
+                          : 8,
                     ),
                     child: Column(
                       children: [
@@ -1526,9 +1690,9 @@ class _DailyPageState extends State<DailyPage> {
 
                         SizedBox(
                           height:
-                              compact
-                                  ? 18
-                                  : 24,
+                              veryCompact
+                                  ? 6
+                                  : 10,
                         ),
 
                         DailyStepProgress(
@@ -1542,104 +1706,80 @@ class _DailyPageState extends State<DailyPage> {
 
                         SizedBox(
                           height:
-                              compact
-                                  ? 28
-                                  : 38,
+                              veryCompact
+                                  ? 5
+                                  : 8,
                         ),
 
-                        DailyQuestionCard(
-                          title:
-                              GameIds.label(
-                            _games[
-                                _gameIndex],
-                          ),
-                          instruction:
-                              _instruction,
-                          question:
-                              _question,
-                          questionColor:
-                              _questionColor,
-                          timeLeft:
-                              _timeLeft,
-
-                          // IMPORTANT:
-                          // this is required by
-                          // daily_page_widgets.dart
-                          compact:
-                              compact,
-
-                          inputText:
-                              _orderRecallInput,
-                          memoryGridPattern:
-                              _memoryGridPattern,
-                          memoryGridSelected:
-                              _memoryGridSelected,
-                          memoryGridShowingPattern:
-                              _memoryGridShowingPattern,
-                          onMemoryGridTap:
-                              _tapMemoryGridTile,
-                        ),
-
-                        SizedBox(
-                          height:
-                              compact
-                                  ? 22
-                                  : 30,
-                        ),
-
-                        ..._options.map(
-                          (
-                            option,
-                          ) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.only(
-                                bottom:
-                                    12,
-                              ),
-                              child:
-                                  DailyAnswerButton(
-                                text:
-                                    option,
-                                onPressed:
-                                    () =>
-                                        _tapAnswer(
-                                  option,
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (
+                              context,
+                              questionConstraints,
+                            ) {
+                              return FittedBox(
+                                fit:
+                                    BoxFit.scaleDown,
+                                alignment:
+                                    Alignment.topCenter,
+                                child: SizedBox(
+                                  width:
+                                      constraints
+                                              .maxWidth -
+                                          24,
+                                  child:
+                                      DailyQuestionCard(
+                                    title:
+                                        GameIds.label(
+                                      _games[
+                                          _gameIndex],
+                                    ),
+                                    instruction:
+                                        _instruction,
+                                    question:
+                                        _question,
+                                    questionColor:
+                                        _questionColor,
+                                    timeLeft:
+                                        _timeLeft,
+                                    compact:
+                                        compact,
+                                    inputText:
+                                        _orderRecallInput,
+                                    memoryGridPattern:
+                                        _memoryGridPattern,
+                                    memoryGridSelected:
+                                        _memoryGridSelected,
+                                    memoryGridShowingPattern:
+                                        _memoryGridShowingPattern,
+                                    onMemoryGridTap:
+                                        _tapMemoryGridTile,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
 
                         SizedBox(
                           height:
-                              compact
-                                  ? 10
-                                  : 18,
+                              veryCompact
+                                  ? 4
+                                  : 6,
                         ),
 
-                        DailyBottomStatCard(
-                          icon:
-                              '🏆',
-                          label:
-                              'Score',
-                          value:
-                              '$_score',
+                        _buildAnswers(
+                          veryCompact,
                         ),
 
-                        const SizedBox(
+                        SizedBox(
                           height:
-                              12,
+                              veryCompact
+                                  ? 4
+                                  : 6,
                         ),
 
-                        DailyBottomStatCard(
-                          icon:
-                              '✅',
-                          label:
-                              'Correct',
-                          value:
-                              '$_correct',
-                        ),
+                        _buildMiniStats(),
                       ],
                     ),
                   ),

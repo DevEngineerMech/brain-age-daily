@@ -4,25 +4,34 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import 'core/services/analytics_service.dart';
 import 'core/services/daily_notification_service.dart';
-import 'core/services/owner_analytics_service.dart';
-
 import 'features/home/home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Firebase
+  await Firebase.initializeApp();
+
+  // Make sure Analytics collection is enabled.
+  await FirebaseAnalytics.instance
+      .setAnalyticsCollectionEnabled(true);
+
+  // Explicit launch event so we can confirm Firebase
+  // is receiving data from TestFlight builds.
+  await FirebaseAnalytics.instance.logEvent(
+    name: 'app_started',
+  );
+
+  // AdMob
   if (!kIsWeb) {
-    await Firebase.initializeApp();
-
-    await AnalyticsService.initialize();
-
     await MobileAds.instance.initialize();
+  }
 
+  // Local notifications only.
+  // This is NOT the old owner notification system.
+  if (!kIsWeb) {
     await DailyNotificationService.initialize();
-
-    await OwnerAnalyticsService.initialize();
   }
 
   runApp(
@@ -30,8 +39,7 @@ Future<void> main() async {
   );
 }
 
-class BrainAgeDailyApp
-    extends StatefulWidget {
+class BrainAgeDailyApp extends StatefulWidget {
   const BrainAgeDailyApp({
     super.key,
   });
@@ -44,62 +52,34 @@ class BrainAgeDailyApp
 class _BrainAgeDailyAppState
     extends State<BrainAgeDailyApp>
     with WidgetsBindingObserver {
-  bool _notificationSetupStarted =
-      false;
+  final FirebaseAnalytics _analytics =
+      FirebaseAnalytics.instance;
+
+  bool _notificationSetupStarted = false;
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addObserver(
-      this,
-    );
+    WidgetsBinding.instance.addObserver(this);
 
-    WidgetsBinding.instance
-        .addPostFrameCallback(
+    WidgetsBinding.instance.addPostFrameCallback(
       (_) {
-        _setupNotifications();
+        _afterFirstFrame();
       },
     );
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(
-      this,
+  Future<void> _afterFirstFrame() async {
+    // Log the initial home screen.
+    await _analytics.logScreenView(
+      screenName: 'home',
+      screenClass: 'HomePage',
     );
 
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(
-    AppLifecycleState state,
-  ) {
-    if (state ==
-        AppLifecycleState.resumed) {
-      AnalyticsService.appForegrounded();
-
-      DailyNotificationService
-          .rescheduleDailyReminder();
-
-      OwnerAnalyticsService
-          .resumeSession();
-    }
-
-    if (state ==
-            AppLifecycleState.paused ||
-        state ==
-            AppLifecycleState.detached ||
-        state ==
-            AppLifecycleState.hidden) {
-      AnalyticsService.appBackgrounded();
-
-      DailyNotificationService
-          .rescheduleDailyReminder();
-
-      OwnerAnalyticsService
-          .pauseSession();
+    // Set up the normal user-facing daily reminders.
+    if (!kIsWeb) {
+      await _setupNotifications();
     }
   }
 
@@ -110,15 +90,32 @@ class _BrainAgeDailyAppState
 
     _notificationSetupStarted = true;
 
-    if (kIsWeb) {
-      return;
-    }
-
     await DailyNotificationService
         .requestPermissionAndSchedule();
+  }
 
-    await OwnerAnalyticsService
-        .refreshDeviceToken();
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state == AppLifecycleState.resumed) {
+      _analytics.logEvent(
+        name: 'app_foregrounded',
+      );
+    }
+
+    if (state == AppLifecycleState.paused) {
+      _analytics.logEvent(
+        name: 'app_backgrounded',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    super.dispose();
   }
 
   @override
@@ -127,19 +124,18 @@ class _BrainAgeDailyAppState
   ) {
     return MaterialApp(
       title: 'Brain Age Daily',
-      debugShowCheckedModeBanner:
-          false,
+      debugShowCheckedModeBanner: false,
+
+      navigatorObservers: [
+        FirebaseAnalyticsObserver(
+          analytics: _analytics,
+        ),
+      ],
+
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Arial',
       ),
-      navigatorObservers: [
-        if (!kIsWeb)
-          FirebaseAnalyticsObserver(
-            analytics:
-                FirebaseAnalytics.instance,
-          ),
-      ],
+
       home: const HomePage(),
     );
   }
