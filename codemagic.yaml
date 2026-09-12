@@ -1,0 +1,62 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    max_build_duration: 60
+
+    integrations:
+      app_store_connect: Codemagic
+
+    environment:
+      flutter: stable
+      xcode: latest
+
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.rork.brain-age-daily
+
+    scripts:
+      - name: Verify source files
+        script: |
+          echo "===== CURRENT COMMIT ====="
+          git log -1 --oneline
+          echo "===== PUBSPEC VERSION ====="
+          grep "version:" pubspec.yaml
+          echo "===== MAIN.DART START ====="
+          sed -n '1,120p' lib/main.dart
+          echo "===== MAIN.DART END ====="
+
+      - name: Flutter clean + get
+        script: |
+          flutter clean
+          flutter pub get
+                - name: Generate app icons
+                
+        script: |
+          flutter pub run flutter_launcher_icons
+
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Set up iOS code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files app.rork.brain-age-daily --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          flutter config --no-enable-swift-package-manager
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
