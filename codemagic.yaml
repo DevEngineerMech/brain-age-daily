@@ -1,7 +1,8 @@
+
 workflows:
   ios-workflow:
-    name: iOS Workflow
-    max_build_duration: 60
+    name: Brain Age Daily - iOS App Store
+    max_build_duration: 120
 
     integrations:
       app_store_connect: Codemagic
@@ -9,54 +10,113 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
 
       ios_signing:
         distribution_type: app_store
         bundle_identifier: app.rork.brain-age-daily
 
     scripts:
-      - name: Verify source files
+      - name: Verify release information
         script: |
-          echo "===== CURRENT COMMIT ====="
-          git log -1 --oneline
-          echo "===== PUBSPEC VERSION ====="
-          grep "version:" pubspec.yaml
-          echo "===== MAIN.DART START ====="
-          sed -n '1,120p' lib/main.dart
-          echo "===== MAIN.DART END ====="
+          set -e
 
-      - name: Flutter clean + get
+          echo "======================================"
+          echo "BRAIN AGE DAILY - iOS RELEASE"
+          echo "======================================"
+
+          echo "Current Git commit:"
+          git log -1 --oneline
+
+          echo "Flutter version:"
+          flutter --version
+
+          echo "Xcode version:"
+          xcodebuild -version
+
+          echo "App version:"
+          grep "^version:" pubspec.yaml
+
+          echo "App bundle identifier:"
+          echo "app.rork.brain-age-daily"
+
+          echo "Checking required files..."
+
+          test -f pubspec.yaml
+          test -f lib/main.dart
+          test -f ios/Podfile
+          test -f assets/images/BrainAgeDailyIcon.png
+
+          echo "Required project files found."
+
+      - name: Configure Flutter for CocoaPods
         script: |
+          set -e
+
+          flutter config --no-enable-swift-package-manager
+
+      - name: Flutter clean and install packages
+        script: |
+          set -e
+
           flutter clean
           flutter pub get
-                - name: Generate app icons
-                
-        script: |
-          flutter pub run flutter_launcher_icons
 
-      - name: Install CocoaPods
+      - name: Generate app icons
         script: |
+          set -e
+
+          dart run flutter_launcher_icons
+
+      - name: Install iOS CocoaPods
+        script: |
+          set -e
+
           cd ios
           pod install
           cd ..
 
-      - name: Set up iOS code signing
+      - name: Configure iOS code signing
         script: |
+          set -e
+
           keychain initialize
-          app-store-connect fetch-signing-files app.rork.brain-age-daily --type IOS_APP_STORE --create
+
+          app-store-connect fetch-signing-files \
+            app.rork.brain-age-daily \
+            --type IOS_APP_STORE \
+            --create
+
           keychain add-certificates
+
           xcode-project use-profiles
 
-      - name: Build signed IPA
+      - name: Build signed iOS IPA
         script: |
-          flutter config --no-enable-swift-package-manager
-          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+          set -e
+
+          echo "Building Brain Age Daily..."
+          echo "Version: 1.0.24"
+
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+          echo "Checking exported IPA..."
+
+          ls -lh build/ios/ipa/
+
+          test -n "$(find build/ios/ipa -name '*.ipa' -print -quit)"
+
+          echo "iOS IPA created successfully."
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
 
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+        submit_to_app_store: false

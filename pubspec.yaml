@@ -1,8 +1,12 @@
+
 name: brainagedaily
 description: Brain Age Daily App
 publish_to: 'none'
 
-version: 1.0.23+6
+# iOS release for App Store Connect.
+# Build number must be higher than any previously uploaded
+# build for this version.
+version: 1.0.24+7
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -11,15 +15,23 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # iOS widgets and local saved data
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.2.3
+
+  # Charts and progress graphs
   fl_chart: ^0.68.0
+
+  # AdMob advertising
   google_mobile_ads: ^5.2.0
 
-  # Firebase versions compatible with older local Flutter/Dart
+  # Firebase — mutually compatible FlutterFire versions
   firebase_core: 3.6.0
   firebase_analytics: 11.3.3
+  firebase_auth: 5.3.1
+  cloud_firestore: 5.4.4
 
+  # Daily reminders and local notifications
   flutter_local_notifications: ^17.2.4
   timezone: ^0.9.4
   flutter_timezone: ^2.1.0

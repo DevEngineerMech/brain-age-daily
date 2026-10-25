@@ -1,13 +1,10 @@
-import '../constants/game_ids.dart';
+
+import '../../features/daily/daily_engine.dart';
 
 class DailyBrainCheckService {
+  DailyBrainCheckService._();
+
   static List<String> dailyGames() {
-    return const [
-      GameIds.memoryGrid,
-      GameIds.quickMath,
-      GameIds.stroopShift,
-      GameIds.focusCount,
-      GameIds.wordSnap,
-    ];
+    return DailyEngine().getTodayGames();
   }
 }

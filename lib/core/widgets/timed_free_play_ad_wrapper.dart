@@ -1,12 +1,14 @@
-import 'dart:async';
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'app_interstitial_ad.dart';
-
-class TimedFreePlayAdWrapper extends StatefulWidget {
+/// Keeps existing Free Play navigation compatible.
+///
+/// Interstitial adverts are now controlled entirely by
+/// FreePlayPage after a completed game.
+///
+/// No timers, random intervals or interruptions during
+/// gameplay are permitted.
+class TimedFreePlayAdWrapper extends StatelessWidget {
   final Widget child;
 
   const TimedFreePlayAdWrapper({
@@ -15,51 +17,7 @@ class TimedFreePlayAdWrapper extends StatefulWidget {
   });
 
   @override
-  State<TimedFreePlayAdWrapper> createState() => _TimedFreePlayAdWrapperState();
-}
-
-class _TimedFreePlayAdWrapperState extends State<TimedFreePlayAdWrapper> {
-  final Random _random = Random();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (kIsWeb) return;
-
-    AppInterstitialAd.load();
-    _scheduleNextAd();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Duration _randomDelay() {
-    final int seconds = 55 + _random.nextInt(31);
-    return Duration(seconds: seconds);
-  }
-
-  void _scheduleNextAd() {
-    if (kIsWeb) return;
-
-    _timer?.cancel();
-
-    _timer = Timer(_randomDelay(), () async {
-      if (!mounted) return;
-
-      await AppInterstitialAd.show(context, placement: 'free_play_timed');
-
-      if (!mounted) return;
-      _scheduleNextAd();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return widget.child;
+    return child;
   }
 }
