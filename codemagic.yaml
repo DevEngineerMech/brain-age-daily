@@ -22,10 +22,10 @@ workflows:
           set -e
 
           echo "======================================"
-          echo "BRAIN AGE DAILY - iOS RELEASE"
+          echo "BRAIN AGE DAILY - IOS RELEASE"
           echo "======================================"
 
-          echo "Current Git commit:"
+          echo "Git commit:"
           git log -1 --oneline
 
           echo "Flutter version:"
@@ -37,16 +37,17 @@ workflows:
           echo "App version:"
           grep "^version:" pubspec.yaml
 
-          echo "Bundle ID:"
+          echo "Bundle identifier:"
           echo "app.rork.brain-age-daily"
 
-          echo "Checking required source files..."
+          echo "Checking required project files..."
 
           test -f pubspec.yaml
           test -f lib/main.dart
+          test -f ios/Podfile
           test -f ios/Runner.xcodeproj/project.pbxproj
 
-          echo "Source files verified."
+          echo "Required files verified."
 
       - name: Configure Flutter
         script: |
@@ -66,11 +67,10 @@ workflows:
           set -e
 
           if [ -f "assets/images/BrainAgeDailyIcon.png" ]; then
-            echo "Generating iOS app icons..."
+            echo "Generating app icons..."
             dart run flutter_launcher_icons
           else
-            echo "Icon source not found."
-            echo "Keeping the existing app icons."
+            echo "Using existing iOS app icons."
           fi
 
       - name: Configure iOS deployment target
@@ -78,20 +78,10 @@ workflows:
           set -e
 
           echo "======================================"
-          echo "SETTING MINIMUM iOS VERSION TO 15.0"
+          echo "SETTING MINIMUM IOS VERSION TO 15.0"
           echo "======================================"
 
-          if [ ! -f "ios/Podfile" ]; then
-            echo "ERROR: ios/Podfile is missing."
-            echo "Commit the Podfile supplied with this fix."
-            exit 1
-          fi
-
-          echo "Checking Podfile platform..."
-
           grep "platform :ios, '15.0'" ios/Podfile
-
-          echo "Updating Runner Xcode deployment targets..."
 
           ruby <<'RUBY'
           path = 'ios/Runner.xcodeproj/project.pbxproj'
@@ -111,10 +101,10 @@ workflows:
 
           File.write(path, content)
 
-          puts "Runner deployment target set to iOS 15.0."
+          puts "Runner deployment target set to 15.0."
           RUBY
 
-          echo "Final deployment target values:"
+          echo "Final deployment targets:"
           grep "IPHONEOS_DEPLOYMENT_TARGET" \
             ios/Runner.xcodeproj/project.pbxproj || true
 
@@ -123,35 +113,44 @@ workflows:
           set -e
 
           echo "======================================"
-          echo "INSTALLING iOS PODS"
+          echo "INSTALLING COCOAPODS"
           echo "======================================"
 
           cd ios
-
           pod install --repo-update
+          cd ..
 
           echo "CocoaPods installation successful."
 
-          cd ..
-
-      - name: Configure iOS code signing
+      - name: Configure existing iOS signing profiles
         script: |
           set -e
 
           echo "======================================"
-          echo "CONFIGURING APP STORE CODE SIGNING"
+          echo "USING CODEMAGIC SIGNING IDENTITIES"
           echo "======================================"
 
-          keychain initialize
+          echo "Bundle ID: app.rork.brain-age-daily"
+          echo "Distribution type: App Store"
 
-          app-store-connect fetch-signing-files \
-            app.rork.brain-age-daily \
-            --type IOS_APP_STORE \
-            --create
+          echo "Available provisioning profiles:"
 
-          keychain add-certificates
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          if [ -d "$PROFILE_DIR" ]; then
+            find "$PROFILE_DIR" \
+              -maxdepth 1 \
+              -type f \
+              -print
+          else
+            echo "No provisioning profile directory found."
+          fi
+
+          echo "Applying Codemagic signing profiles..."
 
           xcode-project use-profiles
+
+          echo "Code signing configuration applied."
 
       - name: Build signed iOS IPA
         script: |
@@ -162,14 +161,24 @@ workflows:
           echo "======================================"
 
           if [ -f "/Users/builder/export_options.plist" ]; then
+
+            echo "Using generated App Store export options."
+
             flutter build ipa \
               --release \
               --export-options-plist=/Users/builder/export_options.plist
+
           else
+
+            echo "Using Flutter IPA export."
+
             flutter build ipa --release
+
           fi
 
-          echo "Checking IPA output..."
+          echo "======================================"
+          echo "CHECKING IPA OUTPUT"
+          echo "======================================"
 
           ls -lh build/ios/ipa/
 
@@ -177,13 +186,12 @@ workflows:
             -name "*.ipa" \
             -print -quit | grep -q .; then
 
-            echo "ERROR: IPA not found."
+            echo "ERROR: No IPA was generated."
             exit 1
+
           fi
 
-          echo "======================================"
-          echo "IPA CREATED SUCCESSFULLY"
-          echo "======================================"
+          echo "IPA successfully created."
 
     artifacts:
       - build/ios/ipa/*.ipa
