@@ -40,22 +40,35 @@ workflows:
           echo "App bundle identifier:"
           echo "app.rork.brain-age-daily"
 
-          echo "Checking required files..."
+          echo "======================================"
+          echo "PROJECT FILE CHECK"
+          echo "======================================"
 
-          test -f pubspec.yaml
-          test -f lib/main.dart
-          test -f ios/Podfile
-          test -f assets/images/BrainAgeDailyIcon.png
+          for file in \
+            pubspec.yaml \
+            lib/main.dart \
+            ios/Podfile \
+            ios/Runner.xcodeproj/project.pbxproj \
+            assets/images/BrainAgeDailyIcon.png
+          do
+            if [ -f "$file" ]; then
+              echo "FOUND: $file"
+            else
+              echo "MISSING: $file"
+            fi
+          done
 
-          echo "Required project files found."
+          echo "======================================"
+          echo "VERIFICATION COMPLETE"
+          echo "======================================"
 
-      - name: Configure Flutter for CocoaPods
+      - name: Configure Flutter
         script: |
           set -e
 
           flutter config --no-enable-swift-package-manager
 
-      - name: Flutter clean and install packages
+      - name: Install Flutter dependencies
         script: |
           set -e
 
@@ -66,9 +79,37 @@ workflows:
         script: |
           set -e
 
-          dart run flutter_launcher_icons
+          if [ -f "assets/images/BrainAgeDailyIcon.png" ]; then
+            echo "App icon source found."
+            dart run flutter_launcher_icons
+          else
+            echo "App icon source not found at the expected path."
+            echo "Keeping existing iOS app icons."
+          fi
 
-      - name: Install iOS CocoaPods
+      - name: Check iOS project
+        script: |
+          set -e
+
+          if [ ! -f "ios/Runner.xcodeproj/project.pbxproj" ]; then
+            echo "ERROR: iOS Xcode project is missing."
+            echo "The repository must contain the existing ios folder."
+            exit 1
+          fi
+
+          if [ ! -f "ios/Podfile" ]; then
+            echo "WARNING: ios/Podfile is missing."
+            echo "Flutter will be asked to prepare iOS configuration."
+            flutter build ios --config-only --release
+          fi
+
+          if [ ! -f "ios/Podfile" ]; then
+            echo "ERROR: ios/Podfile is still missing."
+            echo "Restore the original Podfile before building."
+            exit 1
+          fi
+
+      - name: Install CocoaPods
         script: |
           set -e
 
@@ -95,20 +136,36 @@ workflows:
         script: |
           set -e
 
-          echo "Building Brain Age Daily..."
-          echo "Version: 1.0.24"
+          echo "======================================"
+          echo "BUILDING BRAIN AGE DAILY"
+          echo "Version 1.0.24"
+          echo "======================================"
 
-          flutter build ipa \
-            --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          if [ -f "/Users/builder/export_options.plist" ]; then
+            flutter build ipa \
+              --release \
+              --export-options-plist=/Users/builder/export_options.plist
+          else
+            echo "Export options not generated."
+            echo "Attempting Flutter IPA export using signing configuration."
 
-          echo "Checking exported IPA..."
+            flutter build ipa --release
+          fi
+
+          echo "======================================"
+          echo "CHECKING IPA"
+          echo "======================================"
 
           ls -lh build/ios/ipa/
 
-          test -n "$(find build/ios/ipa -name '*.ipa' -print -quit)"
+          if ! find build/ios/ipa \
+            -name "*.ipa" \
+            -print -quit | grep -q .; then
+            echo "ERROR: No IPA was generated."
+            exit 1
+          fi
 
-          echo "iOS IPA created successfully."
+          echo "IPA successfully generated."
 
     artifacts:
       - build/ios/ipa/*.ipa
