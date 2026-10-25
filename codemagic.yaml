@@ -17,181 +17,81 @@ workflows:
         bundle_identifier: app.rork.brain-age-daily
 
     scripts:
-      - name: Verify release information
-        script: |
-          set -e
-
-          echo "======================================"
-          echo "BRAIN AGE DAILY - IOS RELEASE"
-          echo "======================================"
-
-          echo "Git commit:"
-          git log -1 --oneline
-
-          echo "Flutter version:"
-          flutter --version
-
-          echo "Xcode version:"
-          xcodebuild -version
-
-          echo "App version:"
-          grep "^version:" pubspec.yaml
-
-          echo "Bundle identifier:"
-          echo "app.rork.brain-age-daily"
-
-          echo "Checking required project files..."
-
-          test -f pubspec.yaml
-          test -f lib/main.dart
-          test -f ios/Podfile
-          test -f ios/Runner.xcodeproj/project.pbxproj
-
-          echo "Required files verified."
-
-      - name: Configure Flutter
-        script: |
-          set -e
-
-          flutter config --no-enable-swift-package-manager
-
       - name: Install Flutter dependencies
         script: |
           set -e
-
-          flutter clean
           flutter pub get
 
-      - name: Generate app icons
+      - name: Set iOS deployment target
         script: |
           set -e
 
-          if [ -f "assets/images/BrainAgeDailyIcon.png" ]; then
-            echo "Generating app icons..."
-            dart run flutter_launcher_icons
-          else
-            echo "Using existing iOS app icons."
-          fi
+          echo "Configuring iOS 15.0 minimum deployment target"
 
-      - name: Configure iOS deployment target
-        script: |
-          set -e
-
-          echo "======================================"
-          echo "SETTING MINIMUM IOS VERSION TO 15.0"
-          echo "======================================"
-
-          grep "platform :ios, '15.0'" ios/Podfile
-
-          ruby <<'RUBY'
-          path = 'ios/Runner.xcodeproj/project.pbxproj'
-
+          if [ -f ios/Podfile ]; then
+            ruby <<'RUBY'
+          path = 'ios/Podfile'
           content = File.read(path)
 
-          matches = content.scan(
-            /IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/
-          ).length
+          if content.match?(/^\s*#?\s*platform\s+:ios\s*,/)
+            content.gsub!(
+              /^\s*#?\s*platform\s+:ios\s*,[^\n]*/,
+              "platform :ios, '15.0'"
+            )
+          else
+            content = "platform :ios, '15.0'\n" + content
+          end
 
-          puts "Found #{matches} deployment target settings."
+          File.write(path, content)
+          RUBY
+          fi
+
+          if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
+            ruby <<'RUBY'
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+          content = File.read(path)
 
           content.gsub!(
-            /IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/,
+            /IPHONEOS_DEPLOYMENT_TARGET\s*=\s*[0-9.]+;/,
             'IPHONEOS_DEPLOYMENT_TARGET = 15.0;'
           )
 
           File.write(path, content)
-
-          puts "Runner deployment target set to 15.0."
           RUBY
+          fi
 
-          echo "Final deployment targets:"
-          grep "IPHONEOS_DEPLOYMENT_TARGET" \
-            ios/Runner.xcodeproj/project.pbxproj || true
+          echo "iOS deployment target configured"
 
       - name: Install CocoaPods
         script: |
           set -e
 
-          echo "======================================"
-          echo "INSTALLING COCOAPODS"
-          echo "======================================"
-
           cd ios
           pod install --repo-update
           cd ..
 
-          echo "CocoaPods installation successful."
-
-      - name: Configure existing iOS signing profiles
+      - name: Configure iOS code signing
         script: |
           set -e
 
-          echo "======================================"
-          echo "USING CODEMAGIC SIGNING IDENTITIES"
-          echo "======================================"
-
+          echo "Using existing Codemagic signing identities"
           echo "Bundle ID: app.rork.brain-age-daily"
-          echo "Distribution type: App Store"
-
-          echo "Available provisioning profiles:"
-
-          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-
-          if [ -d "$PROFILE_DIR" ]; then
-            find "$PROFILE_DIR" \
-              -maxdepth 1 \
-              -type f \
-              -print
-          else
-            echo "No provisioning profile directory found."
-          fi
-
-          echo "Applying Codemagic signing profiles..."
 
           xcode-project use-profiles
 
-          echo "Code signing configuration applied."
-
-      - name: Build signed iOS IPA
+      - name: Build iOS IPA
         script: |
           set -e
 
-          echo "======================================"
-          echo "BUILDING BRAIN AGE DAILY 1.0.24"
-          echo "======================================"
+          echo "Building Brain Age Daily 1.0.24"
 
-          if [ -f "/Users/builder/export_options.plist" ]; then
+          flutter build ipa \
+            --release \
+            --build-name=1.0.24 \
+            --build-number=7 \
+            --export-options-plist=/Users/builder/export_options.plist
 
-            echo "Using generated App Store export options."
-
-            flutter build ipa \
-              --release \
-              --export-options-plist=/Users/builder/export_options.plist
-
-          else
-
-            echo "Using Flutter IPA export."
-
-            flutter build ipa --release
-
-          fi
-
-          echo "======================================"
-          echo "CHECKING IPA OUTPUT"
-          echo "======================================"
-
-          ls -lh build/ios/ipa/
-
-          if ! find build/ios/ipa \
-            -name "*.ipa" \
-            -print -quit | grep -q .; then
-
-            echo "ERROR: No IPA was generated."
-            exit 1
-
-          fi
-
-          echo "IPA successfully created."
+          echo "iOS IPA build completed"
 
     artifacts:
       - build/ios/ipa/*.ipa
