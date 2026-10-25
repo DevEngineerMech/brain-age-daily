@@ -20,35 +20,20 @@ workflows:
       - name: Install Flutter dependencies
         script: |
           set -e
+
+          flutter config --no-enable-swift-package-manager
+
           flutter pub get
 
-      - name: Set iOS deployment target
+      - name: Configure iOS deployment target
         script: |
           set -e
 
-          echo "Configuring iOS 15.0 minimum deployment target"
+          echo "Configuring iOS 15.0 deployment target"
 
-          if [ -f ios/Podfile ]; then
-            ruby <<'RUBY'
-          path = 'ios/Podfile'
-          content = File.read(path)
-
-          if content.match?(/^\s*#?\s*platform\s+:ios\s*,/)
-            content.gsub!(
-              /^\s*#?\s*platform\s+:ios\s*,[^\n]*/,
-              "platform :ios, '15.0'"
-            )
-          else
-            content = "platform :ios, '15.0'\n" + content
-          end
-
-          File.write(path, content)
-          RUBY
-          fi
-
-          if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
-            ruby <<'RUBY'
+          ruby <<'RUBY'
           path = 'ios/Runner.xcodeproj/project.pbxproj'
+
           content = File.read(path)
 
           content.gsub!(
@@ -58,24 +43,37 @@ workflows:
 
           File.write(path, content)
           RUBY
-          fi
 
-          echo "iOS deployment target configured"
-
-      - name: Install CocoaPods
+      - name: Refresh Flutter iOS plugin links
         script: |
           set -e
 
-          cd ios
-          pod install --repo-update
-          cd ..
+          echo "Removing stale CocoaPods plugin links"
+
+          rm -rf ios/.symlinks
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+
+          echo "Regenerating Flutter iOS configuration"
+
+          flutter precache --ios
+          flutter pub get
+
+          flutter build ios --config-only --release
+
+          echo "Checking Firebase plugin registration"
+
+          grep -n "flutter_install_all_ios_pods" ios/Podfile
+
+          echo "Checking firebase_core dependency"
+
+          grep -A 5 "firebase_core:" pubspec.lock
 
       - name: Configure iOS code signing
         script: |
           set -e
 
-          echo "Using existing Codemagic signing identities"
-          echo "Bundle ID: app.rork.brain-age-daily"
+          echo "Using existing Codemagic signing profiles"
 
           xcode-project use-profiles
 
@@ -91,12 +89,13 @@ workflows:
             --build-number=7 \
             --export-options-plist=/Users/builder/export_options.plist
 
-          echo "iOS IPA build completed"
+          echo "Checking IPA output"
+
+          ls -lh build/ios/ipa/
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
 
     publishing:
       app_store_connect:
