@@ -37,30 +37,16 @@ workflows:
           echo "App version:"
           grep "^version:" pubspec.yaml
 
-          echo "App bundle identifier:"
+          echo "Bundle ID:"
           echo "app.rork.brain-age-daily"
 
-          echo "======================================"
-          echo "PROJECT FILE CHECK"
-          echo "======================================"
+          echo "Checking required source files..."
 
-          for file in \
-            pubspec.yaml \
-            lib/main.dart \
-            ios/Podfile \
-            ios/Runner.xcodeproj/project.pbxproj \
-            assets/images/BrainAgeDailyIcon.png
-          do
-            if [ -f "$file" ]; then
-              echo "FOUND: $file"
-            else
-              echo "MISSING: $file"
-            fi
-          done
+          test -f pubspec.yaml
+          test -f lib/main.dart
+          test -f ios/Runner.xcodeproj/project.pbxproj
 
-          echo "======================================"
-          echo "VERIFICATION COMPLETE"
-          echo "======================================"
+          echo "Source files verified."
 
       - name: Configure Flutter
         script: |
@@ -80,46 +66,81 @@ workflows:
           set -e
 
           if [ -f "assets/images/BrainAgeDailyIcon.png" ]; then
-            echo "App icon source found."
+            echo "Generating iOS app icons..."
             dart run flutter_launcher_icons
           else
-            echo "App icon source not found at the expected path."
-            echo "Keeping existing iOS app icons."
+            echo "Icon source not found."
+            echo "Keeping the existing app icons."
           fi
 
-      - name: Check iOS project
+      - name: Configure iOS deployment target
         script: |
           set -e
 
-          if [ ! -f "ios/Runner.xcodeproj/project.pbxproj" ]; then
-            echo "ERROR: iOS Xcode project is missing."
-            echo "The repository must contain the existing ios folder."
+          echo "======================================"
+          echo "SETTING MINIMUM iOS VERSION TO 15.0"
+          echo "======================================"
+
+          if [ ! -f "ios/Podfile" ]; then
+            echo "ERROR: ios/Podfile is missing."
+            echo "Commit the Podfile supplied with this fix."
             exit 1
           fi
 
-          if [ ! -f "ios/Podfile" ]; then
-            echo "WARNING: ios/Podfile is missing."
-            echo "Flutter will be asked to prepare iOS configuration."
-            flutter build ios --config-only --release
-          fi
+          echo "Checking Podfile platform..."
 
-          if [ ! -f "ios/Podfile" ]; then
-            echo "ERROR: ios/Podfile is still missing."
-            echo "Restore the original Podfile before building."
-            exit 1
-          fi
+          grep "platform :ios, '15.0'" ios/Podfile
+
+          echo "Updating Runner Xcode deployment targets..."
+
+          ruby <<'RUBY'
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+
+          content = File.read(path)
+
+          matches = content.scan(
+            /IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/
+          ).length
+
+          puts "Found #{matches} deployment target settings."
+
+          content.gsub!(
+            /IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/,
+            'IPHONEOS_DEPLOYMENT_TARGET = 15.0;'
+          )
+
+          File.write(path, content)
+
+          puts "Runner deployment target set to iOS 15.0."
+          RUBY
+
+          echo "Final deployment target values:"
+          grep "IPHONEOS_DEPLOYMENT_TARGET" \
+            ios/Runner.xcodeproj/project.pbxproj || true
 
       - name: Install CocoaPods
         script: |
           set -e
 
+          echo "======================================"
+          echo "INSTALLING iOS PODS"
+          echo "======================================"
+
           cd ios
-          pod install
+
+          pod install --repo-update
+
+          echo "CocoaPods installation successful."
+
           cd ..
 
       - name: Configure iOS code signing
         script: |
           set -e
+
+          echo "======================================"
+          echo "CONFIGURING APP STORE CODE SIGNING"
+          echo "======================================"
 
           keychain initialize
 
@@ -137,8 +158,7 @@ workflows:
           set -e
 
           echo "======================================"
-          echo "BUILDING BRAIN AGE DAILY"
-          echo "Version 1.0.24"
+          echo "BUILDING BRAIN AGE DAILY 1.0.24"
           echo "======================================"
 
           if [ -f "/Users/builder/export_options.plist" ]; then
@@ -146,26 +166,24 @@ workflows:
               --release \
               --export-options-plist=/Users/builder/export_options.plist
           else
-            echo "Export options not generated."
-            echo "Attempting Flutter IPA export using signing configuration."
-
             flutter build ipa --release
           fi
 
-          echo "======================================"
-          echo "CHECKING IPA"
-          echo "======================================"
+          echo "Checking IPA output..."
 
           ls -lh build/ios/ipa/
 
           if ! find build/ios/ipa \
             -name "*.ipa" \
             -print -quit | grep -q .; then
-            echo "ERROR: No IPA was generated."
+
+            echo "ERROR: IPA not found."
             exit 1
           fi
 
-          echo "IPA successfully generated."
+          echo "======================================"
+          echo "IPA CREATED SUCCESSFULLY"
+          echo "======================================"
 
     artifacts:
       - build/ios/ipa/*.ipa
