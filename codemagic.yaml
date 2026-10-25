@@ -22,18 +22,17 @@ workflows:
           set -e
 
           flutter config --no-enable-swift-package-manager
-
+          flutter precache --ios
           flutter pub get
 
       - name: Configure iOS deployment target
         script: |
           set -e
 
-          echo "Configuring iOS 15.0 deployment target"
+          echo "Setting iOS minimum version to 15.0"
 
           ruby <<'RUBY'
           path = 'ios/Runner.xcodeproj/project.pbxproj'
-
           content = File.read(path)
 
           content.gsub!(
@@ -44,38 +43,29 @@ workflows:
           File.write(path, content)
           RUBY
 
-      - name: Refresh Flutter iOS plugin links
+      - name: Install iOS dependencies
         script: |
           set -e
 
-          echo "Removing stale CocoaPods plugin links"
+          echo "Installing Firebase and other iOS plugins"
 
-          rm -rf ios/.symlinks
-          rm -rf ios/Pods
-          rm -f ios/Podfile.lock
+          cd ios
 
-          echo "Regenerating Flutter iOS configuration"
+          pod install --repo-update
 
-          flutter precache --ios
-          flutter pub get
+          cd ..
 
-          flutter build ios --config-only --release
+          echo "iOS dependencies installed"
 
-          echo "Checking Firebase plugin registration"
-
-          grep -n "flutter_install_all_ios_pods" ios/Podfile
-
-          echo "Checking firebase_core dependency"
-
-          grep -A 5 "firebase_core:" pubspec.lock
-
-      - name: Configure iOS code signing
+      - name: Configure Apple code signing
         script: |
           set -e
 
-          echo "Using existing Codemagic signing profiles"
+          echo "Using existing Codemagic App Store signing identities"
 
           xcode-project use-profiles
+
+          echo "Signing profiles configured"
 
       - name: Build iOS IPA
         script: |
@@ -89,13 +79,14 @@ workflows:
             --build-number=7 \
             --export-options-plist=/Users/builder/export_options.plist
 
-          echo "Checking IPA output"
+          echo "Checking generated IPA"
 
           ls -lh build/ios/ipa/
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
 
     publishing:
       app_store_connect:
