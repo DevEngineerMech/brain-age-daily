@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/game_ids.dart';
 import '../models/daily_session_result.dart';
 import '../models/game_result.dart';
+import 'player_xp_service.dart';
 
 class StatsService {
   StatsService._();
@@ -28,7 +29,7 @@ class StatsService {
   }
 
   // ===================================================
-  // EXISTING DAILY BRAIN CHECK HISTORY
+  // DAILY BRAIN CHECK HISTORY AND XP
   // ===================================================
 
   static Future<List<DailySessionResult>> getDailySessions() async {
@@ -82,10 +83,39 @@ class StatsService {
     if (!saved) {
       throw StateError('Daily Brain Check stats were not saved.');
     }
+
+    // Award XP only after a successful save.
+    // Event IDs prevent duplicate XP rewards.
+    final day = session.completedAt;
+
+    final dayKey =
+        '${day.year.toString().padLeft(4, '0')}-'
+        '${day.month.toString().padLeft(2, '0')}-'
+        '${day.day.toString().padLeft(2, '0')}';
+
+    try {
+      await PlayerXpService.award(
+        eventId: 'daily:$dayKey',
+        xp: PlayerXpService.dailyCheckXp,
+      );
+
+      for (final game in session.gameResults) {
+        if (game.attempts >= 5 &&
+            game.correct == game.attempts) {
+          await PlayerXpService.award(
+            eventId: 'perfect:daily:$dayKey:${game.gameId}',
+            xp: PlayerXpService.perfectGameBonusXp,
+          );
+        }
+      }
+    } catch (error) {
+      // The saved result remains valid if XP storage fails.
+      debugPrint('Daily Brain Check XP error: $error');
+    }
   }
 
   // ===================================================
-  // NEW FREE PLAY HISTORY
+  // FREE PLAY HISTORY
   // ===================================================
 
   static Future<List<GameResult>> getFreePlayResults() async {

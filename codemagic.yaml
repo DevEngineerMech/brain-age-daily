@@ -25,6 +25,30 @@ workflows:
           flutter precache --ios
           flutter pub get
 
+      - name: Generate Brain Age Daily app icons
+        script: |
+          set -e
+
+          echo "Generating app icons"
+
+          if [ ! -f "assets/images/BrainAgeDailyIcon.png" ]; then
+            echo "ERROR: App icon image not found!"
+            exit 1
+          fi
+
+          dart run flutter_launcher_icons
+
+          echo "Checking generated iOS app icon"
+
+          ICON_PATH="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+
+          if [ ! -s "$ICON_PATH/Icon-App-1024x1024@1x.png" ]; then
+            echo "ERROR: iOS app icon was not generated!"
+            exit 1
+          fi
+
+          echo "Brain Age Daily app icons generated successfully"
+
       - name: Configure iOS deployment target
         script: |
           set -e
@@ -71,12 +95,12 @@ workflows:
         script: |
           set -e
 
-          echo "Building Brain Age Daily 1.0.24"
+          echo "Building Brain Age Daily 1.0.24 Build 8"
 
           flutter build ipa \
             --release \
             --build-name=1.0.24 \
-            --build-number=7 \
+            --build-number=8 \
             --export-options-plist=/Users/builder/export_options.plist
 
           echo "Checking generated IPA"

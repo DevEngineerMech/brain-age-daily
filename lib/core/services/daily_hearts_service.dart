@@ -1,91 +1,82 @@
-import 'package:flutter/foundation.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DailyHeartsService {
   static const int maxHearts = 3;
-
   static const String _heartsKey = 'daily_hearts';
   static const String _lastRegenKey = 'daily_hearts_last_regen_ms';
 
-  static int _webHearts = maxHearts;
-
   static Future<int> getHearts() async {
-    if (kIsWeb) {
-      return _webHearts;
-    }
+    final prefs = await SharedPreferences.getInstance();
+    var hearts = (prefs.getInt(_heartsKey) ?? maxHearts)
+        .clamp(0, maxHearts).toInt();
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    int hearts = prefs.getInt(_heartsKey) ?? maxHearts;
-    int lastRegenMs = prefs.getInt(_lastRegenKey) ??
+    var lastRegenMs = prefs.getInt(_lastRegenKey) ??
         DateTime.now().millisecondsSinceEpoch;
 
-    final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int elapsedMs = nowMs - lastRegenMs;
-    final int daysPassed = elapsedMs ~/ const Duration(hours: 24).inMilliseconds;
+    final elapsedMs =
+        DateTime.now().millisecondsSinceEpoch - lastRegenMs;
+
+    final daysPassed =
+        elapsedMs ~/ const Duration(hours: 24).inMilliseconds;
 
     if (daysPassed > 0 && hearts < maxHearts) {
-      hearts += daysPassed;
+      hearts = (hearts + daysPassed)
+          .clamp(0, maxHearts).toInt();
 
-      if (hearts > maxHearts) {
-        hearts = maxHearts;
-      }
-
-      lastRegenMs += daysPassed * const Duration(hours: 24).inMilliseconds;
+      lastRegenMs += daysPassed *
+          const Duration(hours: 24).inMilliseconds;
 
       await prefs.setInt(_heartsKey, hearts);
       await prefs.setInt(_lastRegenKey, lastRegenMs);
     }
 
-    return hearts.clamp(0, maxHearts).toInt();
+    return hearts;
   }
 
   static Future<bool> consumeHeart() async {
-    int hearts = await getHearts();
+    final hearts = await getHearts();
 
-    if (hearts <= 0) {
-      return false;
+    if (hearts <= 0) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    final saved = await prefs.setInt(
+      _heartsKey,
+      hearts - 1,
+    );
+
+    if (!saved) {
+      throw StateError('Could not save heart usage.');
     }
 
-    hearts--;
-
-    if (kIsWeb) {
-      _webHearts = hearts;
-      return true;
-    }
-
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    await prefs.setInt(_heartsKey, hearts);
-
-    if (hearts < maxHearts) {
-      await prefs.setInt(
-        _lastRegenKey,
-        DateTime.now().millisecondsSinceEpoch,
-      );
-    }
+    await prefs.setInt(
+      _lastRegenKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
 
     return true;
   }
 
   static Future<int> addHeart() async {
-    int hearts = await getHearts();
+    final hearts = await getHearts();
 
     if (hearts >= maxHearts) {
       return maxHearts;
     }
 
-    hearts++;
+    final updated = hearts + 1;
+    final prefs = await SharedPreferences.getInstance();
 
-    if (kIsWeb) {
-      _webHearts = hearts.clamp(0, maxHearts).toInt();
-      return _webHearts;
+    final saved = await prefs.setInt(
+      _heartsKey,
+      updated,
+    );
+
+    if (!saved) {
+      throw StateError('Could not save heart refill.');
     }
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    await prefs.setInt(_heartsKey, hearts.clamp(0, maxHearts).toInt());
-
-    return hearts.clamp(0, maxHearts).toInt();
+    return updated;
   }
 }

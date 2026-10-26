@@ -29,6 +29,7 @@ class _CoinArcadeLibraryPageState
 
   int get _coins =>
       (_wallet['coins'] as num?)?.toInt() ?? 0;
+
   int get _passes =>
       (_wallet['passes'] as num?)?.toInt() ?? 0;
 
@@ -43,16 +44,17 @@ class _CoinArcadeLibraryPageState
 
   Future<void> _load() async {
     try {
-      final state = await DailyMissionsService.getShopState();
+      final wallet =
+          await DailyMissionsService.getShopState();
 
       if (!mounted) return;
 
       setState(() {
-        _wallet = state;
+        _wallet = wallet;
         _loading = false;
       });
-    } catch (e) {
-      debugPrint('Arcade library error: $e');
+    } catch (error) {
+      debugPrint('Arcade wallet error: $error');
 
       if (mounted) {
         setState(() => _loading = false);
@@ -60,47 +62,97 @@ class _CoinArcadeLibraryPageState
     }
   }
 
-  Widget _pageFor(String id) {
-    switch (id) {
+  Widget _pageFor(String gameId) {
+    switch (gameId) {
       case GameIds.biologyQuiz:
         return const BiologyQuizPage();
+
       case GameIds.scienceQuiz:
         return const ScienceQuizPage();
+
       case GameIds.antonyms:
         return const AntonymsPage();
+
       case GameIds.wordSnap:
         return const WordSnapPage();
+
       case GameIds.wordScramble:
         return const WordScramblePage();
+
       default:
-        throw ArgumentError('Unknown Arcade game: $id');
+        throw ArgumentError.value(
+          gameId,
+          'gameId',
+          'Unknown Arcade game',
+        );
     }
   }
 
-  Future<void> _play(String id) async {
-    if (_busy) return;
+  void _notice(String message) {
+    if (!mounted) return;
 
-    final owned = _unlocks.contains(id);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF352161),
+        ),
+      );
+  }
+
+  Future<void> _play(BrainShopItem item) async {
+    if (_busy || item.gameId == null) return;
+
+    final gameId = item.gameId!;
+    final owned = _unlocks.contains(gameId);
 
     if (!owned) {
-      final result = await showDialog<bool>(
+      final hasPass = _passes > 0;
+      final cost =
+          BrainShopCatalog.singleArcadeEntryPrice;
+
+      final canPay = hasPass || _coins >= cost;
+
+      final allow = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           backgroundColor: GameTheme.panel,
-          title: Text(
-            GameIds.label(id),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.lock_rounded,
+                color: GameTheme.gold,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
           content: Text(
-            _passes > 0
-                ? 'Use one Arcade Pass? You have $_passes passes.'
-                : 'Play for ${BrainShopCatalog.singleArcadeEntryPrice} '
-                    'Brain Coins? You have $_coins coins.',
+            hasPass
+                ? 'This game is locked. Use 1 Arcade Pass '
+                    'to play once? You have $_passes passes.'
+                : canPay
+                    ? 'This game is locked. Spend $cost '
+                        'Brain Coins for one play? '
+                        'You have $_coins coins.'
+                    : 'This game is locked. A play costs '
+                        '$cost Brain Coins or 1 Arcade Pass. '
+                        'You currently have $_coins coins '
+                        'and $_passes passes. Earn coins '
+                        'from Daily Missions.',
             style: const TextStyle(
               color: GameTheme.muted,
+              height: 1.4,
             ),
           ),
           actions: [
@@ -109,16 +161,21 @@ class _CoinArcadeLibraryPageState
                   Navigator.pop(dialogContext, false),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, true),
-              child: const Text('Play'),
-            ),
+            if (canPay)
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, true),
+                child: Text(
+                  hasPass
+                      ? 'Use 1 Pass'
+                      : 'Pay $cost Coins',
+                ),
+              ),
           ],
         ),
       );
 
-      if (result != true || !mounted) return;
+      if (allow != true || !mounted) return;
     }
 
     setState(() => _busy = true);
@@ -127,21 +184,15 @@ class _CoinArcadeLibraryPageState
     bool opened = false;
 
     try {
-      final page = _pageFor(id);
+      final page = _pageFor(gameId);
 
       paymentType =
-          await DailyMissionsService.enterArcadeGame(id);
+          await DailyMissionsService.enterArcadeGame(
+        gameId,
+      );
 
       if (paymentType == 0) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Not enough coins or Arcade Passes.',
-              ),
-            ),
-          );
-        }
+        _notice('Not enough coins or Arcade Passes.');
         return;
       }
 
@@ -163,8 +214,10 @@ class _CoinArcadeLibraryPageState
       );
 
       if (mounted) await _load();
-    } catch (e) {
-      debugPrint('Arcade game launch error: $e');
+    } catch (error) {
+      debugPrint(
+        'Unable to open Arcade game: $error',
+      );
 
       if (!opened && paymentType >= 2) {
         await DailyMissionsService.refundArcadeEntry(
@@ -172,101 +225,181 @@ class _CoinArcadeLibraryPageState
         );
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open the game.'),
-          ),
-        );
-      }
+      _notice('Unable to open the game.');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
-  Widget _card(BrainShopItem item) {
+  Widget _card(
+    BrainShopItem item,
+    bool compact,
+  ) {
     final owned = _unlocks.contains(item.gameId);
+    final hasPass = _passes > 0;
 
-    return InkWell(
-      onTap: _busy ? null : () => _play(item.gameId!),
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        padding: const EdgeInsets.all(13),
-        decoration: GameTheme.card(
-          accent: item.color,
-          radius: 20,
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(
-                  owned
-                      ? Icons.verified_rounded
-                      : Icons.lock_outline_rounded,
-                  color: owned
-                      ? GameTheme.green
-                      : GameTheme.muted,
-                  size: 17,
-                ),
-                const Spacer(),
-                if (owned)
-                  const Text(
-                    'OWNED',
+    final canAfford = owned ||
+        hasPass ||
+        _coins >=
+            BrainShopCatalog.singleArcadeEntryPrice;
+
+    final subtitle = owned
+        ? 'Unlimited plays'
+        : hasPass
+            ? '1 pass per play'
+            : '${BrainShopCatalog.singleArcadeEntryPrice} '
+                'coins per play';
+
+    final actionLabel = owned
+        ? 'PLAY FREE'
+        : hasPass
+            ? 'USE PASS'
+            : '${BrainShopCatalog.singleArcadeEntryPrice} COINS';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _busy ? null : () => _play(item),
+        borderRadius: BorderRadius.circular(15),
+        child: Ink(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: owned
+                ? const Color(0xFF183B43)
+                : const Color(0xFF211B43),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: owned
+                  ? GameTheme.green
+                  : GameTheme.border,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    owned
+                        ? Icons.check_circle_rounded
+                        : Icons.lock_rounded,
+                    color: owned
+                        ? GameTheme.green
+                        : GameTheme.gold,
+                    size: 13,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    owned ? 'UNLOCKED' : 'LOCKED',
                     style: TextStyle(
-                      color: GameTheme.green,
-                      fontWeight: FontWeight.w900,
+                      color: owned
+                          ? GameTheme.green
+                          : GameTheme.gold,
                       fontSize: 9,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-              ],
-            ),
-            const Spacer(),
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: item.color.withOpacity(0.18),
-                border: Border.all(color: item.color),
-                borderRadius: BorderRadius.circular(18),
+                ],
               ),
-              child: Icon(
-                item.icon,
-                color: item.color,
-                size: 37,
+              const SizedBox(height: 11),
+              Container(
+                width: compact ? 40 : 46,
+                height: compact ? 40 : 46,
+                decoration: BoxDecoration(
+                  color: item.color.withOpacity(
+                    owned ? 0.18 : 0.09,
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(12),
+                  border: Border.all(
+                    color: item.color.withOpacity(0.55),
+                  ),
+                ),
+                child: Icon(
+                  item.icon,
+                  color: item.color.withOpacity(
+                    owned ? 1 : 0.7,
+                  ),
+                  size: compact ? 25 : 29,
+                ),
               ),
-            ),
-            const SizedBox(height: 11),
-            Text(
-              item.title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
+              const SizedBox(height: 8),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: compact ? 10 : 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              owned
-                  ? 'Unlimited plays'
-                  : _passes > 0
-                      ? 'Use 1 Arcade Pass'
-                      : '${BrainShopCatalog.singleArcadeEntryPrice} coins per play',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: GameTheme.muted,
-                fontSize: 11,
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: GameTheme.muted,
+                  fontSize: compact ? 9 : 10,
+                ),
               ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.play_circle_fill_rounded,
-              color: item.color,
-              size: 32,
-            ),
-          ],
+              const SizedBox(height: 9),
+              Container(
+                height: 29,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: owned
+                      ? GameTheme.green.withOpacity(0.22)
+                      : canAfford
+                          ? GameTheme.gold.withOpacity(
+                              0.20,
+                            )
+                          : GameTheme.red.withOpacity(
+                              0.18,
+                            ),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      owned
+                          ? Icons.play_arrow_rounded
+                          : canAfford
+                              ? Icons.lock_open_rounded
+                              : Icons.lock_rounded,
+                      size: 14,
+                      color: owned
+                          ? GameTheme.green
+                          : canAfford
+                              ? GameTheme.gold
+                              : GameTheme.red,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      actionLabel,
+                      style: TextStyle(
+                        color: owned
+                            ? GameTheme.green
+                            : canAfford
+                                ? GameTheme.gold
+                                : GameTheme.red,
+                        fontWeight: FontWeight.w900,
+                        fontSize: compact ? 9 : 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -275,7 +408,9 @@ class _CoinArcadeLibraryPageState
   @override
   Widget build(BuildContext context) {
     final games = BrainShopCatalog.items
-        .where((item) => item.kind == ShopKind.gameUnlock)
+        .where(
+          (item) => item.kind == ShopKind.gameUnlock,
+        )
         .toList();
 
     return Scaffold(
@@ -294,8 +429,9 @@ class _CoinArcadeLibraryPageState
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      14, 10, 14, 28,
+                    padding:
+                        const EdgeInsets.fromLTRB(
+                      13, 9, 13, 25,
                     ),
                     children: [
                       Row(
@@ -321,6 +457,7 @@ class _CoinArcadeLibraryPageState
                           const Icon(
                             Icons.monetization_on_rounded,
                             color: GameTheme.gold,
+                            size: 21,
                           ),
                           Text(
                             ' $_coins',
@@ -333,62 +470,93 @@ class _CoinArcadeLibraryPageState
                       ),
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.all(17),
+                        padding: const EdgeInsets.all(13),
                         decoration: GameTheme.card(
                           accent: GameTheme.gold,
+                          radius: 17,
                         ),
-                        child: Column(
+                        child: Row(
                           children: [
                             const Icon(
-                              Icons.sports_esports_rounded,
-                              size: 43,
-                              color: GameTheme.gold,
+                              Icons.confirmation_number_rounded,
+                              size: 31,
+                              color: GameTheme.cyan,
                             ),
-                            const SizedBox(height: 9),
-                            const Text(
-                              'Choose Your Challenge',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              '$_passes Arcade Passes available',
-                              style: const TextStyle(
-                                color: GameTheme.cyan,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Owned games are free to replay. '
-                              'Locked games cost one Arcade Pass '
-                              'or Brain Coins per attempt.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: GameTheme.muted,
-                                fontSize: 11,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$_passes Arcade Passes',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight:
+                                          FontWeight.w900,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Green = unlocked and free. '
+                                    'Gold lock = pay 1 pass or '
+                                    '20 coins per play.',
+                                    style: TextStyle(
+                                      color: GameTheme.muted,
+                                      fontSize: 11,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
-                        itemCount: games.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisExtent: 242,
-                          mainAxisSpacing: 11,
-                          crossAxisSpacing: 11,
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Choose a Game',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
                         ),
-                        itemBuilder: (_, i) => _card(games[i]),
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final width =
+                              constraints.maxWidth;
+
+                          final columns = width >= 555
+                              ? 4
+                              : width >= 410
+                                  ? 3
+                                  : 2;
+
+                          final compact = columns >= 4;
+
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(),
+                            itemCount: games.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: columns,
+                              mainAxisExtent:
+                                  compact ? 184 : 192,
+                              mainAxisSpacing: 9,
+                              crossAxisSpacing: 9,
+                            ),
+                            itemBuilder: (_, index) =>
+                                _card(
+                              games[index],
+                              compact,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -6,6 +6,7 @@ import '../../core/constants/game_ids.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/services/daily_missions_service.dart';
 import '../../core/services/stats_service.dart';
+import '../../core/services/player_xp_service.dart';
 
 import '../../core/widgets/app_interstitial_ad.dart';
 import '../../core/widgets/timed_free_play_ad_wrapper.dart';
@@ -71,7 +72,6 @@ class _FreePlayPageState extends State<FreePlayPage> {
   void initState() {
     super.initState();
 
-    // Preload in advance, not when gameplay finishes.
     AppInterstitialAd.load();
 
     AnalyticsService.freePlayOpened();
@@ -300,8 +300,6 @@ class _FreePlayPageState extends State<FreePlayPage> {
   Future<void> _completedGameRecorded() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Read the persisted value in case the page was
-    // recreated since the previous completed game.
     final previous =
         prefs.getInt(_completedSinceAdKey) ?? 0;
 
@@ -325,9 +323,6 @@ class _FreePlayPageState extends State<FreePlayPage> {
       return;
     }
 
-    // The two-game target has been reached.
-    // Reset before showing so dismissing the advert
-    // cannot trigger a second advert on the same game.
     await prefs.setInt(
       _completedSinceAdKey,
       0,
@@ -344,19 +339,16 @@ class _FreePlayPageState extends State<FreePlayPage> {
 
     if (!mounted) return;
 
-    // If no ad has loaded, AppInterstitialAd.show()
-    // returns without blocking the player.
     await AppInterstitialAd.show(
       context,
       placement: 'free_play_after_2_completed',
     );
 
-    // Prepare the next advert.
     AppInterstitialAd.load();
   }
 
   // =====================================================
-  // GAME NAVIGATION
+  // GAME NAVIGATION AND XP REWARDS
   // =====================================================
 
   Future<void> _openGame(String id) async {
@@ -369,16 +361,12 @@ class _FreePlayPageState extends State<FreePlayPage> {
     _openingGame = true;
 
     try {
-      // Count saved rounds before entering the game.
-      // This is the baseline for completion detection.
       final roundsBefore = await _savedRoundCount(id);
 
       await AnalyticsService.freePlayGameOpened(
         gameId: id,
       );
 
-      // Existing API compatibility. Opening alone
-      // does not award daily mission progress.
       await DailyMissionsService.recordFreePlayOpen(
         id,
       );
@@ -387,8 +375,6 @@ class _FreePlayPageState extends State<FreePlayPage> {
 
       final started = DateTime.now();
 
-      // No timed advertising happens in this wrapper
-      // anymore. The player can finish uninterrupted.
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => TimedFreePlayAdWrapper(
@@ -402,24 +388,49 @@ class _FreePlayPageState extends State<FreePlayPage> {
       final elapsed =
           DateTime.now().difference(started).inSeconds;
 
-      // Logs completed or abandoned play based on
-      // the game's saved records.
       await AnalyticsService.freePlayGameExited(
         gameId: id,
         secondsPlayed: elapsed,
       );
 
-      // Check the saved round count after returning.
       final roundsAfter = await _savedRoundCount(id);
 
-      final completed =
-          roundsAfter > roundsBefore;
+      final completed = roundsAfter > roundsBefore;
 
       await _loadBestScores();
 
       if (!mounted) return;
 
       if (completed) {
+        // One unique award for this completed visit.
+        // Multiple saved rounds do not multiply XP.
+        final eventId =
+            'freeplay:${started.microsecondsSinceEpoch}:$id';
+
+        try {
+          final award = await PlayerXpService.award(
+            eventId: eventId,
+            xp: PlayerXpService.freePlayXp,
+          );
+
+          if (mounted && award.awarded) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '+${award.xpEarned} XP earned!',
+                ),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: const Color(0xFF5734A4),
+              ),
+            );
+          }
+        } catch (error) {
+          debugPrint(
+            '[FreePlay] XP award failed: $error',
+          );
+        }
+
         await _completedGameRecorded();
       } else {
         debugPrint(

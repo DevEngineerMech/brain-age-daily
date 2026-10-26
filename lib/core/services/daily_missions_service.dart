@@ -14,6 +14,11 @@ import '../../features/shop/brain_shop_catalog.dart';
 
 import 'daily_missions_generator.dart';
 import 'stats_service.dart';
+import 'player_xp_service.dart';
+
+
+import 'daily_hearts_service.dart';
+
 
 class DailyMission {
   final String id;
@@ -659,6 +664,18 @@ class DailyMissionsService {
       }
 
       await _saveRaw(wallet);
+
+      // Award XP only for a successfully claimed mission.
+      // The event ID prevents duplicate XP for the same mission/day.
+      try {
+        await PlayerXpService.award(
+          eventId: 'mission:${snapshot.dayKey}:$missionId',
+          xp: PlayerXpService.missionXp,
+        );
+      } catch (error) {
+        debugPrint('[DailyMissions] XP award failed: $error');
+      }
+
       return true;
     });
   }
@@ -777,6 +794,57 @@ class DailyMissionsService {
       return 1;
     });
   }
+
+  
+  // Heart purchases:
+  // 0 = not enough coins
+  // 1 = purchased successfully
+  // 2 = hearts already full
+
+  static const int heartCoinPrice = 40;
+
+  static Future<int> buyHeartWithCoins() {
+    return _locked(() async {
+      final wallet = await _ready();
+
+      final before =
+          await DailyHeartsService.getHearts();
+
+      if (before >= DailyHeartsService.maxHearts) {
+        return 2;
+      }
+
+      final balance =
+          (wallet['coins'] as num?)?.toInt() ?? 0;
+
+      if (balance < heartCoinPrice) {
+        return 0;
+      }
+
+      wallet['coins'] = balance - heartCoinPrice;
+
+      await _saveRaw(wallet);
+
+      try {
+        final after =
+            await DailyHeartsService.addHeart();
+
+        if (after <= before) {
+          wallet['coins'] = balance;
+          await _saveRaw(wallet);
+          return 2;
+        }
+
+        return 1;
+      } catch (error) {
+        // Refund coins if the heart refill fails.
+        wallet['coins'] = balance;
+        await _saveRaw(wallet);
+        rethrow;
+      }
+    });
+  }
+
 
   static Future<bool> equipShopBadge(String badgeId) {
     return _locked(() async {

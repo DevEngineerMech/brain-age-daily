@@ -8,6 +8,7 @@ import '../../core/services/achievements_service.dart';
 import '../../core/services/daily_hearts_service.dart';
 import '../../core/services/daily_notification_service.dart';
 import '../../core/services/stats_service.dart';
+import '../../core/services/player_xp_service.dart';
 
 import '../../core/widgets/app_banner_ad.dart';
 import '../../core/widgets/app_rewarded_ad.dart';
@@ -54,6 +55,9 @@ class _HomePageState extends State<HomePage>
   bool _watchingAd = false;
 
   AchievementUpdate? _achievementsData;
+
+  // NEW: XP progression data.
+  PlayerXpSnapshot? _playerXp;
 
   // ==================================================
   // LIFECYCLE
@@ -127,6 +131,18 @@ class _HomePageState extends State<HomePage>
         );
       }
 
+      // NEW: Read the player's existing XP.
+      // This does not award XP or backfill old games.
+      PlayerXpSnapshot? xp;
+
+      try {
+        xp = await PlayerXpService.getSnapshot();
+      } catch (error) {
+        debugPrint(
+          'Player XP loading error: $error',
+        );
+      }
+
       if (!mounted) return;
 
       setState(() {
@@ -143,6 +159,10 @@ class _HomePageState extends State<HomePage>
 
         if (achievements != null) {
           _achievementsData = achievements;
+        }
+
+        if (xp != null) {
+          _playerXp = xp;
         }
       });
 
@@ -238,15 +258,13 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  
-Future<void> _openDailyMissions() async {
-  await HomeNavigation.openDailyMissions(context);
+  Future<void> _openDailyMissions() async {
+    await HomeNavigation.openDailyMissions(context);
 
-  if (mounted) {
-    await _loadHome();
+    if (mounted) {
+      await _loadHome();
+    }
   }
-}
-
 
   // ==================================================
   // DAILY BRAIN CHECK AND HEARTS
@@ -544,81 +562,84 @@ Future<void> _openDailyMissions() async {
   // MAIN PAGE
   // ==================================================
 
-  
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color(0xFF0C0929),
-    body: Column(
-      children: [
-        Expanded(
-          child: HomeDailyLaunchTransition(
-            brainAge: _brainAge,
-            hearts: _hearts,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0C0929),
+      body: Column(
+        children: [
+          Expanded(
+            child: HomeDailyLaunchTransition(
+              brainAge: _brainAge,
+              hearts: _hearts,
 
-            // This is your EXISTING function.
-            // The animation will call it once at
-            // the end of the transition.
-            onLaunch: _startDailyBrainCheck,
+              // The existing animation calls this
+              // once at the end of the transition.
+              onLaunch: _startDailyBrainCheck,
 
-            builder: (startDailyAnimation) {
-              return HomeStyle(
-                brainAge: _brainAge,
-                userAge: _userAge,
-                totalChecks: _totalChecks,
-                currentStreak: _currentStreak,
-                hearts: _hearts,
+              builder: (startDailyAnimation) {
+                return HomeStyle(
+                  brainAge: _brainAge,
+                  userAge: _userAge,
+                  totalChecks: _totalChecks,
+                  currentStreak: _currentStreak,
+                  hearts: _hearts,
+                  
+onShopReturn: _loadHome,
 
-                notificationsEnabled:
-                    _notificationsEnabled,
 
-                notificationBusy:
-                    _notificationBusy,
+                  // NEW: Pass XP to the existing
+                  // Home screen layout.
+                  playerXp: _playerXp,
 
-                achievements:
-                    _achievementsData,
+                  notificationsEnabled:
+                      _notificationsEnabled,
 
-                onEditAge:
-                    _editAge,
+                  notificationBusy:
+                      _notificationBusy,
 
-                onNotificationsChanged:
-                    _toggleNotifications,
+                  achievements:
+                      _achievementsData,
 
-                // Important:
-                // Start the cinematic animation first,
-                // rather than launching the quiz directly.
-                onStartDaily:
-                    startDailyAnimation,
+                  onEditAge:
+                      _editAge,
 
-                onWatchAdForHeart:
-                    _watchAdForHeart,
+                  onNotificationsChanged:
+                      _toggleNotifications,
 
-                onDailyResults:
-                    _openDailyResults,
+                  // Preserve the cinematic launch.
+                  onStartDaily:
+                      startDailyAnimation,
 
-                onFreePlay:
-                    _openFreePlay,
+                  onWatchAdForHeart:
+                      _watchAdForHeart,
 
-                onProgress:
-                    _openProgress,
+                  onDailyResults:
+                      _openDailyResults,
 
-                onAchievements:
-                    _openAchievements,
-                
-                onDailyMissions: 
-                    _openDailyMissions,
+                  onFreePlay:
+                      _openFreePlay,
 
-                onComingSoon:
-                    _comingSoon,
-              );
-            },
+                  onProgress:
+                      _openProgress,
+
+                  onAchievements:
+                      _openAchievements,
+
+                  onDailyMissions:
+                      _openDailyMissions,
+
+                  onComingSoon:
+                      _comingSoon,
+                );
+              },
+            ),
           ),
-        ),
 
-        // Existing AdMob banner stays untouched.
-        const AppBannerAd(),
-      ],
-    ),
-  );
+          // Existing AdMob banner remains unchanged.
+          const AppBannerAd(),
+        ],
+      ),
+    );
+  }
 }
-    }

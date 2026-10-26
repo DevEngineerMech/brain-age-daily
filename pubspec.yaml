@@ -6,7 +6,7 @@ publish_to: 'none'
 # iOS release for App Store Connect.
 # Build number must be higher than any previously uploaded
 # build for this version.
-version: 1.0.24+7
+version: 1.0.24+8
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

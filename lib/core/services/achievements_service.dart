@@ -8,6 +8,7 @@ import '../constants/game_ids.dart';
 import '../models/daily_session_result.dart';
 import '../models/game_result.dart';
 import 'stats_service.dart';
+import 'player_xp_service.dart';
 
 class BrainBadge {
   final String id;
@@ -63,7 +64,19 @@ class AchievementUpdate {
 }
 
 class AchievementsService {
+  // Version 2 starts achievement tracking from a
+  // clean baseline, without deleting gameplay history.
+  //
+  // Do not change these keys in ordinary app updates.
   static const String _storageKey =
+      'brain_age_badges_unlocked_v2';
+
+  static const String _baselineKey =
+      'brain_age_achievements_baseline_v2';
+
+  // Old unlocks were calculated from lifetime history.
+  // They must not be migrated into the new system.
+  static const String _legacyStorageKey =
       'brain_age_badges_unlocked_v1';
 
   static const Color purple = Color(0xFFB78AFF);
@@ -263,76 +276,132 @@ class AchievementsService {
     ),
   ];
 
-  static DateTime _day(DateTime d) =>
-      DateTime(d.year, d.month, d.day);
+  static DateTime _day(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
 
   static int _maxScore(
     List<GameResult> games,
     Set<String> ids,
   ) {
     int best = 0;
-    for (final g in games) {
-      if (ids.contains(g.gameId) && g.score > best) {
-        best = g.score;
+
+    for (final game in games) {
+      if (ids.contains(game.gameId) &&
+          game.score > best) {
+        best = game.score;
       }
     }
+
     return best;
+  }
+
+  // Count consecutive days using only sessions
+  // completed after the achievement baseline.
+  static int _longestEligibleStreak(
+    List<DateTime> dates,
+  ) {
+    if (dates.isEmpty) return 0;
+
+    int longest = 1;
+    int current = 1;
+
+    for (int i = 1; i < dates.length; i++) {
+      final difference =
+          dates[i].difference(dates[i - 1]).inDays;
+
+      if (difference == 1) {
+        current++;
+      } else {
+        current = 1;
+      }
+
+      if (current > longest) {
+        longest = current;
+      }
+    }
+
+    return longest;
   }
 
   static Map<String, int> _metrics(
     List<DailySessionResult> sessions,
-    int longestStreak,
+    DateTime baseline,
   ) {
-    final games = sessions
-        .expand((s) => s.gameResults)
+    // Only activity after activation is eligible.
+    final eligible = sessions
+        .where(
+          (session) =>
+              session.completedAt.isAfter(baseline),
+        )
+        .toList()
+      ..sort(
+        (a, b) =>
+            a.completedAt.compareTo(b.completedAt),
+      );
+
+    final games = eligible
+        .expand((session) => session.gameResults)
         .toList();
 
-    final dates = sessions
-        .map((s) => _day(s.completedAt))
+    final dates = eligible
+        .map((session) => _day(session.completedAt))
         .toSet()
         .toList()
       ..sort();
 
+    final streak = _longestEligibleStreak(dates);
+
+    // Comeback requires two eligible daily checks
+    // separated by at least seven missed days.
     int comeback = 0;
+
     for (int i = 1; i < dates.length; i++) {
-      if (dates[i].difference(dates[i - 1]).inDays >= 8) {
+      final gap =
+          dates[i].difference(dates[i - 1]).inDays;
+
+      if (gap >= 8) {
         comeback = 1;
         break;
       }
     }
 
+    // Personal best requires beating a score earned
+    // after achievement tracking began.
     int improvement = 0;
-    int bestBefore = -1;
-    final ordered = sessions.toList()
-      ..sort((a, b) =>
-          a.completedAt.compareTo(b.completedAt));
+    int? previousBest;
 
-    for (final session in ordered) {
-      if (bestBefore >= 0 &&
-          session.totalScore > bestBefore) {
+    for (final session in eligible) {
+      if (previousBest != null &&
+          session.totalScore > previousBest) {
         improvement = 1;
       }
-      if (session.totalScore > bestBefore) {
-        bestBefore = session.totalScore;
+
+      if (previousBest == null ||
+          session.totalScore > previousBest) {
+        previousBest = session.totalScore;
       }
     }
 
     final perfect = games.any(
-      (g) => g.attempts >= 5 &&
-          g.correct == g.attempts,
+      (game) =>
+          game.attempts >= 5 &&
+          game.correct == game.attempts,
     );
 
     final fast = games.any(
-      (g) => g.correct >= 5 &&
-          g.averageResponseTimeMs > 0 &&
-          g.averageResponseTimeMs < 2000,
+      (game) =>
+          game.correct >= 5 &&
+          game.averageResponseTimeMs > 0 &&
+          game.averageResponseTimeMs < 2000,
     );
 
-    final types = games.map((g) => g.gameId).toSet();
+    final types =
+        games.map((game) => game.gameId).toSet();
 
     return {
       'checks': dates.length,
-      'streak': longestStreak,
+      'streak': streak,
       'perfect': perfect ? 1 : 0,
       'speed': fast ? 1 : 0,
       'puzzle': _maxScore(games, {
@@ -344,9 +413,18 @@ class AchievementsService {
         GameIds.wordScramble,
         GameIds.antonyms,
       }),
-      'maths': _maxScore(games, {GameIds.quickMath}),
-      'biology': _maxScore(games, {GameIds.biologyQuiz}),
-      'science': _maxScore(games, {GameIds.scienceQuiz}),
+      'maths': _maxScore(
+        games,
+        {GameIds.quickMath},
+      ),
+      'biology': _maxScore(
+        games,
+        {GameIds.biologyQuiz},
+      ),
+      'science': _maxScore(
+        games,
+        {GameIds.scienceQuiz},
+      ),
       'memory': _maxScore(games, {
         GameIds.memoryGrid,
         GameIds.orderRecall,
@@ -355,31 +433,81 @@ class AchievementsService {
       'unique_games': types.length,
       'comeback': comeback,
       'unique_days': dates.length,
-      'correct': sessions.fold<int>(
+      'correct': eligible.fold<int>(
         0,
-        (sum, s) => sum + s.totalCorrect,
+        (sum, session) =>
+            sum + session.totalCorrect,
       ),
     };
   }
 
-  static Future<AchievementUpdate> refresh() async {
-    final prefs = await SharedPreferences.getInstance();
+  // Create the baseline once per installation.
+  //
+  // Future app updates will reuse the same date.
+  static Future<DateTime> _getBaseline(
+    SharedPreferences prefs,
+  ) async {
+    final existing = prefs.getString(_baselineKey);
 
-    final sessions = await StatsService.getDailySessions();
-    final longestStreak =
-        await StatsService.getLongestStreak();
+    if (existing != null) {
+      final parsed = DateTime.tryParse(existing);
 
-    Map<String, dynamic> stored = {};
-    try {
-      final raw = prefs.getString(_storageKey);
-      if (raw != null) {
-        stored = Map<String, dynamic>.from(jsonDecode(raw));
+      if (parsed != null) {
+        return parsed;
       }
-    } catch (_) {
-      stored = {};
     }
 
-    final metrics = _metrics(sessions, longestStreak);
+    final now = DateTime.now();
+
+    final saved = await prefs.setString(
+      _baselineKey,
+      now.toIso8601String(),
+    );
+
+    if (!saved) {
+      throw StateError(
+        'Achievement baseline could not be saved.',
+      );
+    }
+
+    // Discard incorrectly calculated V1 unlocks.
+    // Do not touch any gameplay history.
+    await prefs.remove(_legacyStorageKey);
+
+    return now;
+  }
+
+  static Future<AchievementUpdate> refresh() async {
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    // Initialise baseline before reading gameplay
+    // history, preventing historical unlocks.
+    final baseline = await _getBaseline(prefs);
+
+    final sessions =
+        await StatsService.getDailySessions();
+
+    Map<String, dynamic> stored = {};
+
+    try {
+      final raw = prefs.getString(_storageKey);
+
+      if (raw != null) {
+        final decoded = jsonDecode(raw);
+
+        if (decoded is Map) {
+          stored = Map<String, dynamic>.from(decoded);
+        }
+      }
+    } catch (error) {
+      debugPrint(
+        'Achievement storage read error: $error',
+      );
+    }
+
+    final metrics = _metrics(sessions, baseline);
+
     final newIds = <String>[];
     final now = DateTime.now().toIso8601String();
 
@@ -394,25 +522,55 @@ class AchievementsService {
     }
 
     if (newIds.isNotEmpty) {
-      await prefs.setString(_storageKey, jsonEncode(stored));
+      final saved = await prefs.setString(
+        _storageKey,
+        jsonEncode(stored),
+      );
+
+      if (!saved) {
+        throw StateError(
+          'Achievement unlocks could not be saved.',
+        );
+      }
+
+      // Award XP only for badges newly unlocked on this refresh.
+      // Stable event IDs prevent duplicate XP if refresh runs again.
+      for (final badgeId in newIds) {
+        try {
+          await PlayerXpService.award(
+            eventId: 'achievement:$badgeId',
+            xp: PlayerXpService.achievementXp,
+          );
+        } catch (error) {
+          debugPrint('Achievement XP award failed for $badgeId: $error');
+        }
+      }
     }
 
     final badges = all.map((badge) {
       final dateText = stored[badge.id]?.toString();
+
+      final unlockedAt = dateText == null
+          ? null
+          : DateTime.tryParse(dateText);
+
       return BadgeProgress(
         badge: badge,
         value: metrics[badge.metric] ?? 0,
-        unlockedAt: dateText == null
-            ? null
-            : DateTime.tryParse(dateText),
+        unlockedAt: unlockedAt,
       );
     }).toList();
 
+    final newlyUnlocked = badges
+        .where(
+          (badge) =>
+              newIds.contains(badge.badge.id),
+        )
+        .toList();
+
     return AchievementUpdate(
       badges: badges,
-      newlyUnlocked: badges
-          .where((b) => newIds.contains(b.badge.id))
-          .toList(),
+      newlyUnlocked: newlyUnlocked,
     );
   }
 }

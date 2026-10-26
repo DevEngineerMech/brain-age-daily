@@ -1,9 +1,9 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/services/daily_hearts_service.dart';
 import '../../core/services/daily_missions_service.dart';
 import '../games/shared/game_theme.dart';
-
 import 'brain_shop_catalog.dart';
 import 'coin_arcade_library_page.dart';
 
@@ -16,27 +16,17 @@ class BrainShopPage extends StatefulWidget {
 
 class _BrainShopPageState extends State<BrainShopPage>
     with WidgetsBindingObserver {
-  ShopCategory _category = ShopCategory.arcade;
-
   Map<String, dynamic> _wallet = {};
+  int _hearts = DailyHeartsService.maxHearts;
   bool _loading = true;
   bool _busy = false;
 
-  int get _coins =>
-      (_wallet['coins'] as num?)?.toInt() ?? 0;
-
-  int get _passes =>
-      (_wallet['passes'] as num?)?.toInt() ?? 0;
-
-  int get _boosts =>
-      (_wallet['boosts'] as num?)?.toInt() ?? 0;
-
-  String get _equipped =>
-      _wallet['equipped']?.toString() ?? '';
-
+  int get _coins => (_wallet['coins'] as num?)?.toInt() ?? 0;
+  int get _passes => (_wallet['passes'] as num?)?.toInt() ?? 0;
+  int get _boosts => (_wallet['boosts'] as num?)?.toInt() ?? 0;
+  String get _equipped => _wallet['equipped']?.toString() ?? '';
   List<String> get _unlocks =>
       List<String>.from(_wallet['unlocks'] ?? []);
-
   List<String> get _badges =>
       List<String>.from(_wallet['badges'] ?? []);
 
@@ -55,57 +45,54 @@ class _BrainShopPageState extends State<BrainShopPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _refresh();
-    }
+    if (state == AppLifecycleState.resumed) _refresh();
   }
 
   Future<void> _refresh() async {
     try {
-      final result =
-          await DailyMissionsService.getShopState();
+      final wallet = await DailyMissionsService.getShopState();
+      final hearts = await DailyHeartsService.getHearts();
 
       if (!mounted) return;
 
       setState(() {
-        _wallet = result;
+        _wallet = wallet;
+        _hearts = hearts;
         _loading = false;
       });
     } catch (error) {
-      debugPrint('Brain Shop wallet error: $error');
+      debugPrint('Shop refresh failed: $error');
 
-      if (mounted) {
-        setState(() => _loading = false);
-        _notice('Could not load Brain Coins.');
-      }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _notice('Unable to refresh your shop balance.');
     }
   }
 
-  void _notice(String message) {
+  void _notice(String text) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFF39226F),
+          content: Text(text),
+          backgroundColor: const Color(0xFF352161),
           behavior: SnackBarBehavior.floating,
         ),
       );
   }
 
   bool _owned(BrainShopItem item) {
-    switch (item.kind) {
-      case ShopKind.gameUnlock:
-        return _unlocks.contains(item.gameId);
-
-      case ShopKind.badge:
-        return _badges.contains(item.id);
-
-      default:
-        return false;
+    if (item.kind == ShopKind.gameUnlock) {
+      return _unlocks.contains(item.gameId);
     }
+
+    if (item.kind == ShopKind.badge) {
+      return _badges.contains(item.id);
+    }
+
+    return false;
   }
 
   Future<void> _openArcade() async {
@@ -124,36 +111,21 @@ class _BrainShopPageState extends State<BrainShopPage>
     setState(() => _busy = true);
 
     try {
-      final success =
-          await DailyMissionsService.equipShopBadge(item.id);
+      final equipped =
+          await DailyMissionsService.equipShopBadge(
+        _equipped == item.id ? '' : item.id,
+      );
 
       await _refresh();
 
       _notice(
-        success
-            ? '${item.title} equipped!'
+        equipped
+            ? 'Badge updated!'
             : 'You do not own this badge.',
       );
     } catch (error) {
       debugPrint('Badge equip error: $error');
-      _notice('Could not equip this badge.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _removeBadge() async {
-    if (_busy) return;
-
-    setState(() => _busy = true);
-
-    try {
-      await DailyMissionsService.equipShopBadge('');
-      await _refresh();
-      _notice('Badge unequipped.');
-    } catch (error) {
-      debugPrint('Badge removal error: $error');
-      _notice('Could not remove the badge.');
+      _notice('Could not update the badge.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -162,74 +134,93 @@ class _BrainShopPageState extends State<BrainShopPage>
   Future<void> _buy(BrainShopItem item) async {
     if (_busy) return;
 
-    final previousPasses = _passes;
-
+    final passesBefore = _passes;
     setState(() => _busy = true);
 
     try {
-      final result =
+      final outcome =
           await DailyMissionsService.buyShopItem(item.id);
 
       await _refresh();
 
-      if (result == 0) {
-        _notice(
-          'Not enough coins. You need ${item.price} '
-          'and have $_coins.',
-        );
-      } else if (result == 2) {
+      if (outcome == 0) {
+        _notice('Not enough Brain Coins for ${item.title}.');
+      } else if (outcome == 2) {
         _notice('You already own ${item.title}.');
       } else if (item.kind == ShopKind.mystery) {
-        final received = _passes - previousPasses;
-
-        if (!mounted) return;
-
-        await showDialog<void>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            backgroundColor: GameTheme.panel,
-            title: const Text(
-              'MYSTERY CHEST!',
-              style: TextStyle(
-                color: GameTheme.gold,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.card_giftcard_rounded,
-                  color: GameTheme.gold,
-                  size: 69,
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'You won $received Arcade Passes!',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext),
-                child: const Text('Collect'),
-              ),
-            ],
-          ),
+        _notice(
+          'Mystery chest: +${_passes - passesBefore} Arcade Passes!',
         );
       } else {
         _notice('${item.title} purchased!');
       }
     } catch (error) {
-      debugPrint('Brain Shop purchase error: $error');
-      _notice('Could not complete this purchase.');
+      debugPrint('Shop purchase error: $error');
+      _notice('The purchase could not be completed.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _buyHeart() async {
+    if (_busy ||
+        _hearts >= DailyHeartsService.maxHearts) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: GameTheme.panel,
+        title: const Text(
+          'Buy 1 Heart?',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: Text(
+          'Restore one Daily Brain Check heart for '
+          '${DailyMissionsService.heartCoinPrice} Brain Coins. '
+          'You can hold a maximum of 3 hearts.',
+          style: const TextStyle(color: GameTheme.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, true),
+            child: const Text('Buy Heart'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+
+    try {
+      final outcome =
+          await DailyMissionsService.buyHeartWithCoins();
+
+      await _refresh();
+
+      if (outcome == 1) {
+        _notice('❤️ +1 Heart added!');
+      } else if (outcome == 2) {
+        _notice('Your hearts are already full.');
+      } else {
+        _notice('Not enough Brain Coins to buy a heart.');
+      }
+    } catch (error) {
+      debugPrint('Heart purchase error: $error');
+      await _refresh();
+      _notice('Could not complete heart purchase.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -239,270 +230,196 @@ class _BrainShopPageState extends State<BrainShopPage>
     if (_busy) return;
 
     final owned = _owned(item);
+    final equipped = _equipped == item.id &&
+        item.kind == ShopKind.badge;
 
     final action = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF21184E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(23),
-            side: BorderSide(
-              color: item.color.withOpacity(0.7),
-            ),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF21184E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: item.color.withOpacity(0.7),
           ),
-          title: Text(
-            item.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+        ),
+        title: Text(
+          item.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
           ),
-          content: Column(
+        ),
+        content: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                height: 66,
+                width: 66,
                 decoration: BoxDecoration(
-                  color: item.color.withOpacity(0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: item.color,
-                    width: 2,
-                  ),
+                  color: item.color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(17),
                 ),
                 child: Icon(
                   item.icon,
                   color: item.color,
-                  size: 51,
+                  size: 34,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               Text(
                 item.description,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: GameTheme.muted,
-                  height: 1.5,
                 ),
               ),
-              const SizedBox(height: 15),
-              if (!owned)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.monetization_on_rounded,
-                      color: GameTheme.gold,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${item.price} Brain Coins',
-                      style: const TextStyle(
-                        color: GameTheme.gold,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              if (item.kind == ShopKind.gameUnlock)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'Permanently unlock this game, or '
-                    'play individual rounds in Knowledge Arcade '
-                    'using an Arcade Pass or '
-                    '${BrainShopCatalog.singleArcadeEntryPrice} '
-                    'Brain Coins.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: GameTheme.muted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, 'cancel'),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: GameTheme.muted),
-              ),
-            ),
-            if (item.kind == ShopKind.badge && owned)
-              ElevatedButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, 'equip'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: GameTheme.purple,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Equip'),
-              )
-            else if (owned)
-              const Text(
-                'OWNED',
+              const SizedBox(height: 12),
+              Text(
+                owned
+                    ? (equipped ? 'EQUIPPED' : 'OWNED')
+                    : '${item.price} Brain Coins',
                 style: TextStyle(
-                  color: GameTheme.green,
+                  color: owned
+                      ? GameTheme.green
+                      : GameTheme.gold,
                   fontWeight: FontWeight.w900,
                 ),
-              )
-            else
-              ElevatedButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, 'buy'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: GameTheme.purple,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Buy'),
               ),
-          ],
-        );
-      },
+              if (item.kind == ShopKind.gameUnlock) ...[
+                const SizedBox(height: 9),
+                const Text(
+                  'Permanent unlock. You can also play locked '
+                  'games using one Arcade Pass or 20 coins '
+                  'per attempt.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: GameTheme.muted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, 'cancel'),
+            child: const Text('Close'),
+          ),
+          if (item.kind == ShopKind.badge && owned)
+            FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, 'equip'),
+              child: Text(equipped ? 'Unequip' : 'Equip'),
+            )
+          else if (!owned)
+            FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, 'buy'),
+              child: const Text('Purchase'),
+            ),
+        ],
+      ),
     );
 
     if (!mounted) return;
 
-    if (action == 'buy') {
-      await _buy(item);
-    } else if (action == 'equip') {
-      await _equip(item);
-    }
+    if (action == 'buy') await _buy(item);
+    if (action == 'equip') await _equip(item);
   }
 
-  String _categoryTitle(ShopCategory category) {
-    switch (category) {
-      case ShopCategory.arcade:
-        return 'Arcade';
-
-      case ShopCategory.powerUps:
-        return 'Power-ups';
-
-      case ShopCategory.customisation:
-        return 'Customisation';
-
-      case ShopCategory.specials:
-        return 'Specials';
-    }
+  Widget _pill(
+    IconData icon,
+    String value,
+    Color color,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 17),
+        const SizedBox(width: 5),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
   }
 
-  IconData _categoryIcon(ShopCategory category) {
-    switch (category) {
-      case ShopCategory.arcade:
-        return Icons.sports_esports_rounded;
-
-      case ShopCategory.powerUps:
-        return Icons.bolt_rounded;
-
-      case ShopCategory.customisation:
-        return Icons.auto_awesome_rounded;
-
-      case ShopCategory.specials:
-        return Icons.card_giftcard_rounded;
-    }
-  }
-
-  Widget _walletHeader() {
-    final badge = BrainShopCatalog.badge(_equipped);
-
+  Widget _walletCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: GameTheme.card(
         accent: GameTheme.gold,
+        radius: 18,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 53,
-                height: 53,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: GameTheme.gold.withOpacity(0.13),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Icon(
-                  Icons.monetization_on_rounded,
-                  color: GameTheme.gold,
-                  size: 34,
-                ),
+              const Icon(
+                Icons.monetization_on_rounded,
+                color: GameTheme.gold,
+                size: 28,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 9),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'YOUR BRAIN COINS',
+                      'BRAIN COINS',
                       style: TextStyle(
                         color: GameTheme.muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10,
                       ),
                     ),
-                    const SizedBox(height: 3),
                     Text(
                       '$_coins',
                       style: const TextStyle(
                         color: GameTheme.gold,
-                        fontSize: 30,
+                        fontSize: 27,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (badge != null)
-                IconButton(
-                  onPressed: _removeBadge,
-                  tooltip: 'Unequip badge',
-                  icon: Icon(
-                    badge.icon,
-                    size: 31,
-                    color: badge.color,
-                  ),
-                ),
+              _pill(
+                Icons.favorite_rounded,
+                '$_hearts/${DailyHeartsService.maxHearts}',
+                GameTheme.red,
+              ),
             ],
           ),
-          const SizedBox(height: 13),
-          const Divider(color: GameTheme.border),
-          Row(
+          const SizedBox(height: 9),
+          const Divider(
+            color: GameTheme.border,
+            height: 1,
+          ),
+          const SizedBox(height: 11),
+          Wrap(
+            spacing: 18,
+            runSpacing: 8,
             children: [
-              const Icon(
+              _pill(
                 Icons.confirmation_number_rounded,
-                color: GameTheme.cyan,
-                size: 21,
+                '$_passes passes',
+                GameTheme.cyan,
               ),
-              const SizedBox(width: 6),
-              Text(
-                '$_passes Arcade Passes',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const Spacer(),
-              const Icon(
+              _pill(
                 Icons.bolt_rounded,
-                color: GameTheme.gold,
-                size: 20,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '$_boosts Doublers',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
+                '$_boosts doublers',
+                GameTheme.gold,
               ),
             ],
           ),
@@ -511,164 +428,119 @@ class _BrainShopPageState extends State<BrainShopPage>
     );
   }
 
-  Widget _playArcadeButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 53,
-      child: ElevatedButton.icon(
-        onPressed: _openArcade,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: GameTheme.gold,
-          foregroundColor: const Color(0xFF251338),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        icon: const Icon(Icons.sports_esports_rounded),
-        label: const Text(
-          'PLAY KNOWLEDGE ARCADE',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tabs() {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: ShopCategory.values.map((category) {
-          final selected = category == _category;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              selected: selected,
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _categoryIcon(category),
-                    size: 17,
-                    color: selected
-                        ? Colors.white
-                        : GameTheme.muted,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(_categoryTitle(category)),
-                ],
-              ),
-              onSelected: (_) {
-                setState(() => _category = category);
-              },
-              backgroundColor: GameTheme.panel,
-              selectedColor: GameTheme.purple,
-              side: const BorderSide(
-                color: GameTheme.border,
-              ),
-              labelStyle: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : GameTheme.muted,
-                fontWeight: FontWeight.w800,
-              ),
+  Widget _sectionTitle(
+    String text,
+    IconData icon,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 19),
+          const SizedBox(width: 7),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _itemCard(BrainShopItem item) {
+  Widget _itemCard(
+    BrainShopItem item,
+    bool compact,
+  ) {
     final owned = _owned(item);
-    final equipped =
+
+    final equipped = owned &&
         item.kind == ShopKind.badge &&
         _equipped == item.id;
+
+    final iconSize = compact ? 24.0 : 28.0;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: _busy ? null : () => _inspect(item),
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(15),
         child: Ink(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(9),
           decoration: GameTheme.card(
             accent: item.color,
-            radius: 19,
+            radius: 15,
           ),
           child: Column(
             children: [
               Row(
                 children: [
-                  const Spacer(),
                   Icon(
-                    equipped
-                        ? Icons.verified_rounded
-                        : owned
-                            ? Icons.check_circle_rounded
-                            : Icons.lock_outline_rounded,
+                    owned
+                        ? Icons.check_circle_rounded
+                        : Icons.lock_rounded,
+                    size: 13,
                     color: owned
                         ? GameTheme.green
                         : GameTheme.muted,
-                    size: 18,
+                  ),
+                  const Spacer(),
+                  Text(
+                    equipped
+                        ? 'ACTIVE'
+                        : owned
+                            ? 'OWNED'
+                            : 'LOCKED',
+                    style: TextStyle(
+                      color: owned
+                          ? GameTheme.green
+                          : GameTheme.muted,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 7),
               Container(
-                width: 70,
-                height: 70,
-                alignment: Alignment.center,
+                width: compact ? 38 : 44,
+                height: compact ? 38 : 44,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(19),
-                  color: item.color.withOpacity(0.15),
-                  border: Border.all(
-                    color: item.color.withOpacity(0.7),
-                  ),
+                  color: item.color.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   item.icon,
-                  size: 40,
+                  size: iconSize,
                   color: item.color,
-                ),
-              ),
-              const SizedBox(height: 11),
-              Text(
-                item.title,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13,
                 ),
               ),
               const SizedBox(height: 7),
               Expanded(
-                child: Text(
-                  item.description,
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: GameTheme.muted,
-                    fontSize: 10,
+                child: Center(
+                  child: Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: compact ? 10 : 12,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 6,
-                ),
+                height: 25,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: item.color.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   equipped
@@ -676,12 +548,106 @@ class _BrainShopPageState extends State<BrainShopPage>
                       : owned
                           ? 'OWNED'
                           : '🪙 ${item.price}',
-                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: owned
                         ? GameTheme.green
-                        : item.color,
-                    fontSize: 12,
+                        : GameTheme.gold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: compact ? 10 : 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heartCard(bool compact) {
+    final full =
+        _hearts >= DailyHeartsService.maxHearts;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: (_busy || full) ? null : _buyHeart,
+        borderRadius: BorderRadius.circular(15),
+        child: Ink(
+          padding: const EdgeInsets.all(9),
+          decoration: GameTheme.card(
+            accent: GameTheme.red,
+            radius: 15,
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    full
+                        ? Icons.check_circle_rounded
+                        : Icons.favorite_rounded,
+                    color: full
+                        ? GameTheme.green
+                        : GameTheme.red,
+                    size: 13,
+                  ),
+                  const Spacer(),
+                  Text(
+                    full ? 'FULL' : 'REFILL',
+                    style: TextStyle(
+                      color: full
+                          ? GameTheme.green
+                          : GameTheme.muted,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              Container(
+                width: compact ? 38 : 44,
+                height: compact ? 38 : 44,
+                decoration: BoxDecoration(
+                  color: GameTheme.red.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.favorite_rounded,
+                  color: GameTheme.red,
+                  size: compact ? 24 : 28,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '+1 Heart',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: compact ? 10 : 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                height: 25,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: GameTheme.red.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  full
+                      ? 'MAX HEARTS'
+                      : '🪙 ${DailyMissionsService.heartCoinPrice}',
+                  style: TextStyle(
+                    color: full
+                        ? GameTheme.green
+                        : GameTheme.gold,
+                    fontSize: compact ? 10 : 11,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -693,23 +659,71 @@ class _BrainShopPageState extends State<BrainShopPage>
     );
   }
 
-  Widget _itemGrid() {
+  Widget _categoryGrid(
+    ShopCategory category, {
+    bool withHeart = false,
+  }) {
     final items =
-        BrainShopCatalog.inCategory(_category);
+        BrainShopCatalog.inCategory(category);
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 252,
-        crossAxisSpacing: 11,
-        mainAxisSpacing: 11,
-      ),
-      itemBuilder: (context, index) =>
-          _itemCard(items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+
+        final columns = width >= 555
+            ? 4
+            : width >= 410
+                ? 3
+                : 2;
+
+        final compact = columns >= 4;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics:
+              const NeverScrollableScrollPhysics(),
+          itemCount:
+              items.length + (withHeart ? 1 : 0),
+          gridDelegate:
+              SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: compact ? 143 : 151,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemBuilder: (context, index) {
+            if (withHeart && index == 0) {
+              return _heartCard(compact);
+            }
+
+            return _itemCard(
+              items[index - (withHeart ? 1 : 0)],
+              compact,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _section(
+    ShopCategory category,
+    String title,
+    IconData icon,
+    Color color, {
+    bool withHeart = false,
+  }) {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.stretch,
+      children: [
+        _sectionTitle(title, icon, color),
+        _categoryGrid(
+          category,
+          withHeart: withHeart,
+        ),
+        const SizedBox(height: 21),
+      ],
     );
   }
 
@@ -731,8 +745,9 @@ class _BrainShopPageState extends State<BrainShopPage>
               : RefreshIndicator(
                   onRefresh: _refresh,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      14, 10, 14, 28,
+                    padding:
+                        const EdgeInsets.fromLTRB(
+                      13, 10, 13, 25,
                     ),
                     children: [
                       Row(
@@ -740,22 +755,17 @@ class _BrainShopPageState extends State<BrainShopPage>
                           IconButton(
                             onPressed: () =>
                                 Navigator.pop(context),
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  GameTheme.panel,
-                            ),
                             icon: const Icon(
                               Icons.arrow_back_rounded,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 10),
                           const Expanded(
                             child: Text(
                               'Brain Shop',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
+                                fontSize: 23,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -763,45 +773,76 @@ class _BrainShopPageState extends State<BrainShopPage>
                           const Icon(
                             Icons.storefront_rounded,
                             color: GameTheme.gold,
-                            size: 28,
+                            size: 24,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 15),
-                      _walletHeader(),
-                      const SizedBox(height: 14),
-                      _playArcadeButton(),
-                      const SizedBox(height: 17),
-                      _tabs(),
-                      const SizedBox(height: 14),
-                      Text(
-                        _categoryTitle(_category),
-                        style: const TextStyle(
-                          color: GameTheme.gold,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
+                      const SizedBox(height: 10),
+                      _walletCard(),
+                      const SizedBox(height: 11),
+                      SizedBox(
+                        height: 45,
+                        child: FilledButton.icon(
+                          onPressed:
+                              _busy ? null : _openArcade,
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                GameTheme.gold,
+                            foregroundColor:
+                                const Color(0xFF281744),
+                            shape:
+                                RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(13),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.sports_esports_rounded,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            'PLAY KNOWLEDGE ARCADE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 7),
-                      const Text(
-                        'Tap an item to inspect or purchase it.',
-                        style: TextStyle(
-                          color: GameTheme.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      _itemGrid(),
                       const SizedBox(height: 19),
+                      _section(
+                        ShopCategory.arcade,
+                        'Arcade Games',
+                        Icons.sports_esports_rounded,
+                        GameTheme.cyan,
+                      ),
+                      _section(
+                        ShopCategory.powerUps,
+                        'Power-ups & Hearts',
+                        Icons.favorite_rounded,
+                        GameTheme.red,
+                        withHeart: true,
+                      ),
+                      _section(
+                        ShopCategory.customisation,
+                        'Customisation',
+                        Icons.auto_awesome_rounded,
+                        GameTheme.purple,
+                      ),
+                      _section(
+                        ShopCategory.specials,
+                        'Specials',
+                        Icons.card_giftcard_rounded,
+                        GameTheme.gold,
+                      ),
                       const Text(
-                        'Earn Brain Coins through Daily Missions '
-                        'and the Seven-Day Reward Calendar. '
-                        'Use Arcade Passes to play locked games.',
+                        'Tap an item to see details. Earn Brain Coins '
+                        'from Daily Missions and the 7-Day '
+                        'Reward Calendar.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: GameTheme.muted,
                           fontSize: 11,
-                          height: 1.5,
                         ),
                       ),
                     ],

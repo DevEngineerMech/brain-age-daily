@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 
 import '../../core/services/achievements_service.dart';
 import '../../core/services/daily_hearts_service.dart';
 import '../../core/services/daily_missions_service.dart';
+import '../../core/services/player_xp_service.dart';
 
 import '../mystery_bonus/mystery_bonus_page.dart';
 import '../rewards/seven_day_reward_page.dart';
@@ -18,6 +18,7 @@ class HomeStyle extends StatelessWidget {
   final int totalChecks;
   final int currentStreak;
   final int hearts;
+  final PlayerXpSnapshot? playerXp;
 
   final bool notificationsEnabled;
   final bool notificationBusy;
@@ -34,6 +35,12 @@ class HomeStyle extends StatelessWidget {
   final VoidCallback onDailyMissions;
   final ValueChanged<String> onComingSoon;
 
+  
+final Future<void> Function()? onShopReturn;
+
+
+  
+
   const HomeStyle({
     super.key,
     required this.brainAge,
@@ -41,6 +48,7 @@ class HomeStyle extends StatelessWidget {
     required this.totalChecks,
     required this.currentStreak,
     required this.hearts,
+    this.playerXp,
     required this.notificationsEnabled,
     required this.notificationBusy,
     required this.achievements,
@@ -54,6 +62,9 @@ class HomeStyle extends StatelessWidget {
     required this.onAchievements,
     required this.onDailyMissions,
     required this.onComingSoon,
+    
+this.onShopReturn,
+
   });
 
   static const Color bg = Color(0xFF0C0929);
@@ -132,7 +143,11 @@ class HomeStyle extends StatelessWidget {
     );
   }
 
-  Widget _header() {
+  // =====================================================
+  // HEADER
+  // =====================================================
+
+  Widget _header(BuildContext context) {
     return Row(
       children: [
         const Icon(
@@ -190,6 +205,31 @@ class HomeStyle extends StatelessWidget {
             ],
           ),
         ),
+        
+IconButton(
+  tooltip: 'Brain Shop',
+  onPressed: () async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const BrainShopPage(),
+      ),
+    );
+
+    if (context.mounted) {
+      await onShopReturn?.call();
+    }
+  },
+  icon: const Icon(
+    Icons.storefront_rounded,
+    color: gold,
+  ),
+  constraints: const BoxConstraints(
+    minWidth: 38,
+    minHeight: 40,
+  ),
+  padding: const EdgeInsets.all(6),
+),
+
         IconButton(
           tooltip: 'Edit your age',
           onPressed: onEditAge,
@@ -202,6 +242,10 @@ class HomeStyle extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // BRAIN AGE DESCRIPTION
+  // =====================================================
+
   String _brainAgeDescription() {
     if (totalChecks == 0) {
       return 'Complete your first Daily Brain Check';
@@ -210,21 +254,250 @@ class HomeStyle extends StatelessWidget {
     final difference = userAge - brainAge;
 
     if (difference >= 3) {
-      return 'You perform like someone '
-          '$difference years younger.';
+      return 'Your brain age is $difference years younger.';
     }
 
     if (difference <= -3) {
-      return 'Your result is '
+      return 'Your brain age is '
           '${difference.abs()} years above your age.';
     }
 
     return 'Your result is close to your age range.';
   }
 
-  Widget _brainAgeCard() {
+  // =====================================================
+  // BRAIN AGE EXPLANATION POPUP
+  // =====================================================
+
+  void _showBrainAgeInfo(BuildContext context) {
+    final difference = brainAge - userAge;
+
+    final String result;
+
+    if (totalChecks == 0) {
+      result =
+          'You have not completed a Daily Brain Check yet. '
+          'Your first result will give you a starting point.';
+    } else if (difference < 0) {
+      result =
+          'Your brain age is ${difference.abs()} years below '
+          'your entered age. That is a positive result in this game!';
+    } else if (difference > 0) {
+      result =
+          'Your brain age is $difference years above your '
+          'entered age. Keep practising and track how your '
+          'score changes over time.';
+    } else {
+      result =
+          'Your brain age matches your entered age, '
+          'so your result is in line with your age in this game.';
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF211747),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(
+            color: Color(0xFF9E6BF4),
+          ),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.psychology_rounded,
+              color: gold,
+            ),
+            SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                'What is Brain Age?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Brain Age is a fun estimate based on how '
+                'you perform in Daily Brain Check challenges, '
+                'including memory, focus and speed.',
+                style: TextStyle(
+                  color: Colors.white,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Your entered age: $userAge',
+                style: const TextStyle(
+                  color: gold,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                'Your comparison target is around $userAge. '
+                'Lower is better, while a higher score gives '
+                'you a goal to work towards.',
+                style: const TextStyle(
+                  color: Colors.white,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 13),
+              Text(
+                result,
+                style: const TextStyle(
+                  color: Color(0xFF65E0D3),
+                  fontWeight: FontWeight.bold,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                'This score is for entertainment and tracking '
+                'your performance. It is not a medical assessment '
+                'or a measurement of your brain’s biological age.',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Got it',
+              style: TextStyle(
+                color: gold,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================================
+  // XP PROGRESS CARD
+  // =====================================================
+
+  Widget _xpProgressCard() {
+    final xp = playerXp;
+
+    final level = xp?.level ?? 1;
+    final progress = xp?.progress ?? 0.0;
+    final current = xp?.currentLevelXp ?? 0;
+    final required = xp?.requiredLevelXp ?? 100;
+    final remaining = xp?.xpRemaining ?? 100;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(13, 16, 13, 16),
+      padding: const EdgeInsets.all(14),
+      decoration: _decoration(
+        border: const Color(0xFFAC87FA),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.military_tech_rounded,
+                color: gold,
+                size: 28,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LEVEL $level',
+                      style: const TextStyle(
+                        color: gold,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      xp?.title ?? 'Brain Rookie',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$current / $required XP',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 11),
+          TweenAnimationBuilder<double>(
+            tween: Tween(
+              begin: 0.0,
+              end: progress.clamp(0.0, 1.0),
+            ),
+            duration: const Duration(
+              milliseconds: 750,
+            ),
+            builder: (context, value, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 9,
+                backgroundColor: const Color(0xFF0D0B2C),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(gold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            '$remaining XP to Level ${level + 1}',
+            style: const TextStyle(
+              color: muted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================================
+  // MAIN BRAIN AGE CARD
+  // =====================================================
+
+  Widget _brainAgeCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        13,
+        16,
+        13,
+        16,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -248,15 +521,15 @@ class HomeStyle extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.workspace_premium_rounded,
                           color: gold,
                           size: 18,
                         ),
-                        SizedBox(width: 5),
-                        Flexible(
+                        const SizedBox(width: 5),
+                        const Flexible(
                           child: Text(
                             'YOUR BRAIN AGE',
                             maxLines: 1,
@@ -265,6 +538,22 @@ class HomeStyle extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
                             ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'What does Brain Age mean?',
+                          onPressed: () {
+                            _showBrainAgeInfo(context);
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 29,
+                            minHeight: 29,
+                          ),
+                          icon: const Icon(
+                            Icons.help_outline_rounded,
+                            color: gold,
+                            size: 20,
                           ),
                         ),
                       ],
@@ -337,13 +626,79 @@ class HomeStyle extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 9),
-                    HomePulsingHearts(hearts: hearts),
+
+                    // HEARTS AND REWARDED AD
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: HomePulsingHearts(
+                              hearts: hearts,
+                            ),
+                          ),
+                        ),
+                        if (hearts <
+                            DailyHeartsService.maxHearts) ...[
+                          const SizedBox(width: 3),
+                          Tooltip(
+                            message: 'Watch an ad for +1 Heart',
+                            child: InkWell(
+                              onTap: onWatchAdForHeart,
+                              borderRadius:
+                                  BorderRadius.circular(18),
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: gold,
+                                  borderRadius:
+                                      BorderRadius.circular(18),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.play_circle_fill_rounded,
+                                      size: 16,
+                                      color: Color(0xFF35125A),
+                                    ),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      '+1',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF35125A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 16),
+
+          // XP NOW ABOVE START BUTTON
+          _xpProgressCard(),
+
+          const SizedBox(height: 13),
+
+          // START DAILY BRAIN CHECK
           Container(
             height: 57,
             decoration: BoxDecoration(
@@ -403,50 +758,14 @@ class HomeStyle extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 44,
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onDailyResults,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(
-                  color: Color(0xFFB19BFF),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
-                ),
-              ),
-              icon: const Icon(Icons.bar_chart_rounded),
-              label: const Text(
-                'View Daily Results',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-          if (hearts < DailyHeartsService.maxHearts) ...[
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: onWatchAdForHeart,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD247),
-                foregroundColor: const Color(0xFF35125A),
-              ),
-              icon: const Icon(
-                Icons.play_circle_fill_rounded,
-              ),
-              label: const Text(
-                'Watch Ad for +1 Heart',
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
+
+  // =====================================================
+  // QUICK NAVIGATION TILES
+  // =====================================================
 
   Widget _quickTile({
     required String title,
@@ -508,6 +827,10 @@ class HomeStyle extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // LEADERBOARD FALLBACK
+  // =====================================================
+
   Widget _leaderboard() {
     return _card(
       onTap: () => onComingSoon('Weekly Leaderboard'),
@@ -548,6 +871,10 @@ class HomeStyle extends StatelessWidget {
       ),
     );
   }
+
+  // =====================================================
+  // ACHIEVEMENTS
+  // =====================================================
 
   Widget _achievements() {
     final count = achievements?.unlockedCount ?? 0;
@@ -668,11 +995,19 @@ class HomeStyle extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // DAILY MISSIONS
+  // =====================================================
+
   Widget _missions() {
     return HomeAnimatedMissionsCard(
       onOpen: onDailyMissions,
     );
   }
+
+  // =====================================================
+  // CHALLENGE A FRIEND FALLBACK
+  // =====================================================
 
   Widget _friendCard() {
     return _card(
@@ -702,8 +1037,8 @@ class HomeStyle extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
-                const Text(
+                SizedBox(height: 3),
+                Text(
                   'Share a brain challenge',
                   style: TextStyle(
                     color: muted,
@@ -713,7 +1048,7 @@ class HomeStyle extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.chevron_right_rounded,
             color: Colors.white70,
           ),
@@ -721,6 +1056,10 @@ class HomeStyle extends StatelessWidget {
       ),
     );
   }
+
+  // =====================================================
+  // MAIN HOME LAYOUT
+  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -739,15 +1078,25 @@ class HomeStyle extends StatelessWidget {
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
-            13, 10, 13, 24,
+            13,
+            10,
+            13,
+            24,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _header(),
+              // HEADER WITH SHOP ICON
+              _header(context),
+
               const SizedBox(height: 10),
-              _brainAgeCard(),
+
+              // BRAIN AGE + HEARTS + XP + START BUTTON
+              _brainAgeCard(context),
+
               const SizedBox(height: 12),
+
+              // FREE PLAY AND PROGRESS
               Row(
                 children: [
                   Expanded(
@@ -771,47 +1120,58 @@ class HomeStyle extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 11),
-              SizedBox(
-  height: 169,
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Expanded(
-        child: HomeLeaderboardCard(),
-      ),
-      const SizedBox(width: 9),
-      Expanded(
-        child: _achievements(),
-      ),
-    ],
-  ),
-),
-              const SizedBox(height: 11),
-              _missions(),
-              const SizedBox(height: 11),
-              const _HomeBrainShopCard(),
-              const SizedBox(height: 11),
-              
-SizedBox(
-  height: 87,
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Expanded(
-        child: HomeChallengeFriendCard(),
-      ),
-      const SizedBox(width: 9),
-      const Expanded(
-        child: _HomeMysteryBonusCard(),
-      ),
-    ],
-  ),
-),
 
               const SizedBox(height: 11),
+
+              // LEADERBOARD + ACHIEVEMENTS
+              SizedBox(
+                height: 169,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Expanded(
+                      child: HomeLeaderboardCard(),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: _achievements(),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 11),
+
+              // MISSIONS
+              _missions(),
+
+              const SizedBox(height: 11),
+
+              // FRIEND CHALLENGE + MYSTERY BONUS
+              SizedBox(
+                height: 87,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Expanded(
+                      child: HomeChallengeFriendCard(),
+                    ),
+                    const SizedBox(width: 9),
+                    const Expanded(
+                      child: _HomeMysteryBonusCard(),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 11),
+
+              // SEVEN DAY REWARD
               const _HomeSevenDayRewardCard(),
+
               const SizedBox(height: 10),
+
+              // AGE EDIT
               TextButton.icon(
                 onPressed: onEditAge,
                 icon: const Icon(
@@ -835,7 +1195,7 @@ SizedBox(
 }
 
 // =====================================================
-// BRAIN SHOP HOME CARD
+// BRAIN SHOP HOME CARD - RETAINED FROM ORIGINAL
 // =====================================================
 
 class _HomeBrainShopCard extends StatefulWidget {
@@ -1136,7 +1496,9 @@ class _HomeSevenDayRewardCardState
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
     if (state == AppLifecycleState.resumed) {
       _loadCalendar();
     }
